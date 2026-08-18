@@ -1,0 +1,13 @@
+# Artéfacts de build
+dist/
+*.zip
+*.crx
+
+# Clé de signature — ne JAMAIS committer : elle fixe l'ID de l'extension
+*.pem
+
+# Système
+.DS_Store
+Thumbs.db
+node_modules/
+__pycache__/

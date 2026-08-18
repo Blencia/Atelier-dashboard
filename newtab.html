@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <title>Atelier</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="booting">
+  <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
+  <div id="substrate" class="substrate" aria-hidden="true"></div>
+
+  <!-- Cartouche : la barre de titre d'une feuille de plan -->
+  <header class="titleblock" id="titleblock">
+    <div class="tb-cell tb-brand">
+      <span class="tb-key">Atelier</span>
+      <span class="tb-val" id="tbCount">—</span>
+    </div>
+
+    <div class="tb-cell tb-search">
+      <label class="sr-only" for="omni">Chercher dans les favoris</label>
+      <input id="omni" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Chercher un favori · / pour ouvrir">
+      <kbd class="tb-kbd">/</kbd>
+      <ul id="omniResults" class="omni-results" role="listbox" hidden></ul>
+    </div>
+
+    <div class="tb-cell tb-clock">
+      <span class="tb-key" id="tbDate">—</span>
+      <span class="tb-val" id="tbTime">—:—</span>
+    </div>
+
+    <div class="tb-cell tb-actions">
+      <button id="btnEdit" class="btn" type="button" title="Mode plan (E)">Mode plan</button>
+      <button id="btnSettings" class="btn btn-icon" type="button" title="Réglages" aria-label="Réglages">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 5.4A2.6 2.6 0 1 0 8 10.6 2.6 2.6 0 0 0 8 5.4zm0 1.3a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/><path fill="currentColor" d="m13.9 9.3-.9-.5a5.4 5.4 0 0 0 0-1.6l.9-.5a.6.6 0 0 0 .2-.8l-1-1.7a.6.6 0 0 0-.8-.2l-.9.5a5.2 5.2 0 0 0-1.4-.8V2.6a.6.6 0 0 0-.6-.6H7.6a.6.6 0 0 0-.6.6v1.1c-.5.2-1 .5-1.4.8l-.9-.5a.6.6 0 0 0-.8.2l-1 1.7a.6.6 0 0 0 .2.8l.9.5a5.4 5.4 0 0 0 0 1.6l-.9.5a.6.6 0 0 0-.2.8l1 1.7c.2.3.5.4.8.2l.9-.5c.4.3.9.6 1.4.8v1.1c0 .3.3.6.6.6h1.8c.3 0 .6-.3.6-.6v-1.1c.5-.2 1-.5 1.4-.8l.9.5c.3.2.6.1.8-.2l1-1.7a.6.6 0 0 0-.2-.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Règle de colonnes, visible seulement en mode plan -->
+  <div class="ruler" id="ruler" aria-hidden="true"></div>
+
+  <main class="sheet" id="grid"></main>
+
+  <div class="empty" id="empty" hidden>
+    <p class="empty-title">La feuille est vide.</p>
+    <p class="empty-help">Ajoute un dossier de favoris pour commencer.</p>
+    <button class="btn btn-primary" id="emptyAdd" type="button">Ajouter un module</button>
+  </div>
+
+  <div class="dock" id="dock" hidden>
+    <button class="btn btn-primary" id="btnAdd" type="button">+ Ajouter un module</button>
+    <span class="dock-hint">Glisse l'en-tête pour déplacer · tire le coin pour redimensionner</span>
+    <button class="btn" id="btnDone" type="button">Terminer</button>
+  </div>
+
+  <div class="modal-root" id="modalRoot" hidden></div>
+  <div class="toast" id="toast" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

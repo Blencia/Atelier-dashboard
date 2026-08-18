@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier — aperçu</title>
+<style>
+/* ============================================================
+   Atelier — feuille de plan
+   Toutes les couleurs passent par des variables : le panneau
+   de réglages les réécrit à chaud sur :root.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* Substrat */
+  --ink:        #14161a;
+  --panel:      #1a1d23;
+  --panel-2:    #20242b;
+  --rule:       #2b313a;
+  --rule-soft:  #23282f;
+
+  /* Encres */
+  --graphite:   #e6e8ec;
+  --graphite-2: #9aa3af;
+  --graphite-3: #626b78;
+
+  /* Laiton : l'accent par défaut, remplaçable */
+  --accent:     #e3a008;
+  --accent-ink: #14161a;
+
+  --radius: 6px;
+  --gap: 14px;
+  --row: 132px;
+  --cols: 12;
+  --maxw: 1440px;
+
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --dur: 130ms;
+  --ease: cubic-bezier(.2, .7, .3, 1);
+}
+
+:root[data-mode="light"] {
+  color-scheme: light;
+  --ink:        #eceae4;
+  --panel:      #f7f6f2;
+  --panel-2:    #ffffff;
+  --rule:       #d3cfc5;
+  --rule-soft:  #e2ded5;
+  --graphite:   #1d2027;
+  --graphite-2: #5a626e;
+  --graphite-3: #8b929c;
+  --accent-ink: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+/* Les styles auteur battent la feuille du navigateur : sans ça,
+   .dock{display:flex} rendrait l'attribut hidden inopérant. */
+[hidden] { display: none !important; }
+
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--graphite);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body.booting .sheet,
+body.booting .titleblock { opacity: 0; }
+body:not(.booting) .sheet,
+body:not(.booting) .titleblock { transition: opacity 180ms var(--ease); }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(7px); }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Fond ---------- */
+
+.wallpaper {
+  position: fixed; inset: 0; z-index: -2;
+  background-size: cover; background-position: center;
+  display: none;
+}
+body.has-wallpaper .wallpaper { display: block; }
+body.has-wallpaper .wallpaper::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--ink);
+  opacity: calc(var(--wall-dim, 55) / 100);
+}
+
+/* Le papier millimétré : discret au repos, révélé en mode plan */
+.substrate {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms var(--ease);
+  background-image:
+    linear-gradient(to right, var(--rule-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rule-soft) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+body.show-grid .substrate { opacity: .5; }
+body.is-editing .substrate { opacity: 1; }
+
+/* ---------- Cartouche ---------- */
+
+.titleblock {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: stretch;
+  gap: 0;
+  max-width: var(--maxw);
+  margin: 20px auto 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.tb-cell {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px;
+  border-right: 1px solid var(--rule-soft);
+  min-height: 46px;
+}
+.tb-cell:last-child { border-right: 0; }
+
+.tb-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--graphite-3);
+  white-space: nowrap;
+}
+.tb-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--graphite);
+  white-space: nowrap;
+}
+.tb-brand .tb-key { color: var(--accent); font-weight: 600; }
+
+.tb-search { flex: 1; position: relative; padding-left: 12px; }
+.tb-search input {
+  flex: 1; width: 100%;
+  background: transparent; border: 0; outline: 0;
+  color: var(--graphite);
+  font: inherit; font-size: 14px;
+  padding: 12px 0;
+}
+.tb-search input::placeholder { color: var(--graphite-3); }
+.tb-kbd {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--graphite-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.tb-search:focus-within .tb-kbd { opacity: 0; }
+
+.tb-actions { gap: 6px; }
+
+.omni-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  margin: 0; padding: 4px;
+  list-style: none;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgb(0 0 0 / .38);
+  max-height: 52vh; overflow-y: auto;
+  z-index: 50;
+}
+.omni-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.omni-item[aria-selected="true"] { background: var(--panel); }
+.omni-item img { width: 16px; height: 16px; flex: none; border-radius: 3px; }
+.omni-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omni-url {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--graphite-3);
+  max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omni-empty { padding: 10px; color: var(--graphite-3); font-size: 13px; }
+
+/* ---------- Règle de colonnes (mode plan) ---------- */
+
+.ruler {
+  display: none;
+  max-width: var(--maxw);
+  margin: 10px auto 0;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gap);
+}
+body.is-editing .ruler { display: grid; }
+.ruler span {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--graphite-3);
+  text-align: center;
+  border-top: 1px solid var(--rule);
+  padding-top: 3px;
+}
+
+/* ---------- Feuille ---------- */
+
+.sheet {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-auto-rows: var(--row);
+  gap: var(--gap);
+  max-width: var(--maxw);
+  margin: 18px auto 96px;
+  padding: 0 0 4px;
+}
+
+/* ---------- Module ---------- */
+
+.widget {
+  grid-column: span var(--w, 3);
+  grid-row: span var(--h, 2);
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  animation: rise 260ms var(--ease) backwards;
+}
+.widget:hover { border-color: color-mix(in srgb, var(--rule) 60%, var(--graphite-3)); }
+
+.widget-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule-soft);
+  flex: none;
+}
+.widget-title {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--graphite-2);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.widget-dim {
+  display: none;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+body.is-editing .widget-dim { display: inline; }
+
+.widget-tools { display: none; gap: 2px; }
+body.is-editing .widget-tools { display: flex; }
+
+.widget-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+.widget-body::-webkit-scrollbar { width: 8px; }
+.widget-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 8px; }
+
+/* Mode plan : coins d'équerre + poignée */
+body.is-editing .widget {
+  cursor: default;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+}
+body.is-editing .widget-head { cursor: grab; }
+body.is-editing .widget-head:active { cursor: grabbing; }
+body.is-editing .widget-body { pointer-events: none; opacity: .62; }
+
+.widget.dragging { opacity: .35; transform: scale(.99); }
+.widget.resizing { border-color: var(--accent); }
+
+.handle {
+  display: none;
+  position: absolute; right: 0; bottom: 0;
+  width: 18px; height: 18px;
+  cursor: nwse-resize;
+}
+.handle::before, .handle::after {
+  content: ""; position: absolute; background: var(--accent);
+}
+.handle::before { right: 3px; bottom: 3px; width: 11px; height: 2px; }
+.handle::after  { right: 3px; bottom: 3px; width: 2px; height: 11px; }
+body.is-editing .widget { position: relative; }
+body.is-editing .handle { display: block; }
+
+/* ---------- Contenu : favoris ---------- */
+
+.bm-crumbs {
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--graphite-3);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.bm-crumbs button {
+  background: none; border: 0; padding: 0;
+  color: var(--accent); cursor: pointer; font: inherit;
+}
+
+.bm-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile, 74px), 1fr));
+  gap: 4px;
+}
+.tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 4px;
+  border-radius: 5px;
+  text-decoration: none; color: var(--graphite);
+  text-align: center;
+  transition: background var(--dur) var(--ease);
+}
+.tile:hover, .tile:focus-visible { background: var(--panel-2); }
+.tile img, .tile .glyph {
+  width: var(--icon, 26px); height: var(--icon, 26px);
+  border-radius: 5px; flex: none;
+}
+.tile .glyph {
+  display: grid; place-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  color: var(--accent);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.tile span.label {
+  font-size: 11px; line-height: 1.25;
+  color: var(--graphite-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-word;
+}
+body[data-labels="off"] .tile span.label { display: none; }
+
+.bm-list { display: flex; flex-direction: column; gap: 1px; }
+.row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 7px;
+  border-radius: 4px;
+  text-decoration: none; color: var(--graphite);
+}
+.row:hover, .row:focus-visible { background: var(--panel-2); }
+.row img, .row .glyph {
+  width: 16px; height: 16px; flex: none; border-radius: 3px;
+}
+.row .glyph {
+  display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--rule);
+  color: var(--accent); font-size: 9px; font-family: var(--font-mono);
+}
+.row .label {
+  flex: 1; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row .host {
+  font-family: var(--font-mono); font-size: 10px; color: var(--graphite-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%;
+}
+.bm-list.is-dense .row { padding: 2px 7px; }
+.bm-list.is-dense .label { font-size: 12px; }
+body[data-density="compact"] .row { padding: 3px 7px; }
+body[data-density="compact"] .tile { padding: 7px 4px; }
+
+.note {
+  color: var(--graphite-3); font-size: 12px;
+  font-family: var(--font-mono); letter-spacing: .04em;
+}
+
+/* ---------- Contenu : horloge ---------- */
+
+.clock { display: grid; place-content: center; height: 100%; text-align: center; }
+.clock-time {
+  font-family: var(--font-mono);
+  font-size: clamp(30px, 5.4vw, 58px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em; line-height: 1;
+}
+.clock-date {
+  margin-top: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--graphite-3);
+}
+
+/* ---------- Contenu : bloc-notes ---------- */
+
+.notes-area {
+  width: 100%; height: 100%;
+  min-height: 60px;
+  background: transparent; border: 0; outline: 0; resize: none;
+  color: var(--graphite);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65;
+}
+.notes-area::placeholder { color: var(--graphite-3); }
+
+/* ---------- Boutons ---------- */
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--graphite-2);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+  white-space: nowrap;
+}
+.btn:hover { color: var(--graphite); border-color: var(--graphite-3); }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  font-weight: 600;
+}
+.btn-primary:hover { filter: brightness(1.08); color: var(--accent-ink); }
+.btn-icon { padding: 6px; display: grid; place-items: center; }
+.btn-ghost { border-color: transparent; padding: 4px 6px; }
+.btn-ghost:hover { border-color: var(--rule); }
+.btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.btn-danger:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Dock / vide ---------- */
+
+.dock {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 45;
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .4);
+}
+.dock-hint {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .06em; color: var(--graphite-3);
+}
+
+.empty { text-align: center; padding: 90px 20px; }
+.empty-title { font-size: 16px; margin: 0 0 6px; }
+.empty-help { color: var(--graphite-3); margin: 0 0 18px; font-size: 13px; }
+
+/* ---------- Modale ---------- */
+
+.modal-root {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center;
+  background: rgb(0 0 0 / .55);
+  padding: 24px;
+}
+.modal {
+  width: min(560px, 100%);
+  max-height: 84vh; overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 30px 70px rgb(0 0 0 / .5);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--rule);
+  position: sticky; top: 0; background: var(--panel); z-index: 2;
+}
+.modal-head h2 {
+  margin: 0;
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--graphite-2);
+  font-weight: 500;
+}
+.modal-body { padding: 16px 18px 20px; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid var(--rule);
+}
+
+.field { margin-bottom: 14px; }
+.field > label {
+  display: block; margin-bottom: 6px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--graphite-3);
+}
+.field input[type="text"],
+.field input[type="number"],
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--graphite);
+  font: inherit; font-size: 13px;
+  padding: 8px 10px;
+}
+.field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.field input[type="color"] {
+  width: 44px; height: 30px; padding: 2px;
+  background: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
+}
+.field-inline { display: flex; align-items: center; gap: 10px; }
+.field-inline > label { margin: 0; flex: 1; text-transform: none; letter-spacing: 0; font-size: 13px; font-family: var(--font-ui); color: var(--graphite); }
+.field-hint { margin-top: 5px; font-size: 11px; color: var(--graphite-3); }
+.field-row { display: flex; gap: 12px; }
+.field-row > .field { flex: 1; }
+
+.section-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--graphite-3);
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 14px; margin: 22px 0 12px;
+}
+.section-label:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+
+.picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.picker button {
+  text-align: left; padding: 12px;
+  background: var(--ink); border: 1px solid var(--rule); border-radius: 5px;
+  color: var(--graphite); cursor: pointer;
+  transition: border-color var(--dur) var(--ease);
+}
+.picker button:hover { border-color: var(--accent); }
+.picker strong { display: block; font-size: 13px; margin-bottom: 3px; font-weight: 500; }
+.picker small { color: var(--graphite-3); font-size: 11px; }
+
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.swatch {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+}
+.swatch[aria-pressed="true"] { border-color: var(--graphite); }
+
+.toast {
+  position: fixed; bottom: 22px; left: 22px; z-index: 200;
+  background: var(--panel-2); border: 1px solid var(--rule);
+  border-left: 2px solid var(--accent);
+  border-radius: 5px; padding: 10px 14px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1100px) { :root { --cols: 8; } }
+@media (max-width: 760px) {
+  :root { --cols: 4; --gap: 10px; }
+  .titleblock { flex-wrap: wrap; margin-inline: 12px; }
+  .tb-search { order: 3; flex-basis: 100%; border-right: 0; border-top: 1px solid var(--rule-soft); }
+  .sheet, .ruler { padding-inline: 12px; }
+  .widget { grid-column: 1 / -1; }
+  .dock-hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+</style>
+</head>
+<body class="booting">
+
+  <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
+  <div id="substrate" class="substrate" aria-hidden="true"></div>
+
+  <!-- Cartouche : la barre de titre d'une feuille de plan -->
+  <header class="titleblock" id="titleblock">
+    <div class="tb-cell tb-brand">
+      <span class="tb-key">Atelier</span>
+      <span class="tb-val" id="tbCount">—</span>
+    </div>
+
+    <div class="tb-cell tb-search">
+      <label class="sr-only" for="omni">Chercher dans les favoris</label>
+      <input id="omni" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Chercher un favori · / pour ouvrir">
+      <kbd class="tb-kbd">/</kbd>
+      <ul id="omniResults" class="omni-results" role="listbox" hidden></ul>
+    </div>
+
+    <div class="tb-cell tb-clock">
+      <span class="tb-key" id="tbDate">—</span>
+      <span class="tb-val" id="tbTime">—:—</span>
+    </div>
+
+    <div class="tb-cell tb-actions">
+      <button id="btnEdit" class="btn" type="button" title="Mode plan (E)">Mode plan</button>
+      <button id="btnSettings" class="btn btn-icon" type="button" title="Réglages" aria-label="Réglages">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 5.4A2.6 2.6 0 1 0 8 10.6 2.6 2.6 0 0 0 8 5.4zm0 1.3a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/><path fill="currentColor" d="m13.9 9.3-.9-.5a5.4 5.4 0 0 0 0-1.6l.9-.5a.6.6 0 0 0 .2-.8l-1-1.7a.6.6 0 0 0-.8-.2l-.9.5a5.2 5.2 0 0 0-1.4-.8V2.6a.6.6 0 0 0-.6-.6H7.6a.6.6 0 0 0-.6.6v1.1c-.5.2-1 .5-1.4.8l-.9-.5a.6.6 0 0 0-.8.2l-1 1.7a.6.6 0 0 0 .2.8l.9.5a5.4 5.4 0 0 0 0 1.6l-.9.5a.6.6 0 0 0-.2.8l1 1.7c.2.3.5.4.8.2l.9-.5c.4.3.9.6 1.4.8v1.1c0 .3.3.6.6.6h1.8c.3 0 .6-.3.6-.6v-1.1c.5-.2 1-.5 1.4-.8l.9.5c.3.2.6.1.8-.2l1-1.7a.6.6 0 0 0-.2-.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Règle de colonnes, visible seulement en mode plan -->
+  <div class="ruler" id="ruler" aria-hidden="true"></div>
+
+  <main class="sheet" id="grid"></main>
+
+  <div class="empty" id="empty" hidden>
+    <p class="empty-title">La feuille est vide.</p>
+    <p class="empty-help">Ajoute un dossier de favoris pour commencer.</p>
+    <button class="btn btn-primary" id="emptyAdd" type="button">Ajouter un module</button>
+  </div>
+
+  <div class="dock" id="dock" hidden>
+    <button class="btn btn-primary" id="btnAdd" type="button">+ Ajouter un module</button>
+    <span class="dock-hint">Glisse l'en-tête pour déplacer · tire le coin pour redimensionner</span>
+    <button class="btn" id="btnDone" type="button">Terminer</button>
+  </div>
+
+  <div class="modal-root" id="modalRoot" hidden></div>
+  <div class="toast" id="toast" hidden></div>
+
+  
+
+<script>
+/* ============================================================
+   Bouchon de l'API Chrome — aperçu hors extension.
+   Le reste du code est identique à l'extension réelle.
+   ============================================================ */
+(function () {
+  // jsdom / vieux navigateurs
+  window.structuredClone ||= (o) => JSON.parse(JSON.stringify(o));
+
+  const B = {};
+  let nextId = 100;
+
+  function folder(title, parentId, children) {
+    const id = String(nextId++);
+    B[id] = { id, title, parentId, children: [] };
+    for (const c of children) {
+      const kid = typeof c === 'string' ? null : c;
+      if (kid) B[id].children.push(kid(id));
+    }
+    return id;
+  }
+  const link = (title, url, added) => (parentId) => {
+    const id = String(nextId++);
+    B[id] = { id, title, url, parentId, dateAdded: added || Date.now() };
+    return id;
+  };
+  const sub = (title, kids) => (parentId) => folder(title, parentId, kids);
+
+  const rootId = folder('', null, [
+    sub('Barre de favoris', [
+      sub('Dev', [
+        link('WordPress Developer Resources', 'https://developer.wordpress.org/', 5),
+        link('Breakdance — Documentation', 'https://breakdance.com/documentation/', 9),
+        link('SureCart Developer Docs', 'https://developer.surecart.com/', 8),
+        link('MDN Web Docs', 'https://developer.mozilla.org/', 7),
+        link('Can I use', 'https://caniuse.com/', 6),
+        link('PHP: Manual', 'https://www.php.net/manual/en/', 4),
+        link('Supabase Docs', 'https://supabase.com/docs', 3),
+        link('Cloudflare Workers', 'https://developers.cloudflare.com/workers/', 2),
+      ]),
+      sub('Clients', [
+        link('Centre canin des ruisseaux', 'https://centrecanindesruisseaux.com/', 9),
+        link('GoBrien Production', 'https://gobrien.ca/', 8),
+        link('Maison Nectar', 'https://maisonnectar.com/', 7),
+        link('NorthTrucks', 'https://northtrucks.ca/', 6),
+        link('PG Esthétique Mobile', 'https://pgesthetiquemobile.com/', 5),
+        link('Mariève Bergeron — check-in', 'https://app.marievebergeron.com/', 4),
+      ]),
+      sub('Outils', [
+        link('Hostinger hPanel', 'https://hpanel.hostinger.com/', 9),
+        link('Cloudflare Dashboard', 'https://dash.cloudflare.com/', 8),
+        link('Vercel', 'https://vercel.com/dashboard', 7),
+        link('Figma', 'https://www.figma.com/files', 6),
+        link('Canva', 'https://www.canva.com/', 5),
+        link('Notion', 'https://www.notion.so/', 4),
+        link('AppSumo', 'https://appsumo.com/account/products/', 3),
+        link('Stripe', 'https://dashboard.stripe.com/', 2),
+      ]),
+      sub('Veille IA', [
+        link('Claude', 'https://claude.ai/', 9),
+        link('Anthropic — Docs', 'https://docs.claude.com/', 8),
+        link('Hacker News', 'https://news.ycombinator.com/', 7),
+        link('Product Hunt', 'https://www.producthunt.com/', 6),
+      ]),
+      link('Gmail', 'https://mail.google.com/', 9),
+      link('Google Agenda', 'https://calendar.google.com/', 8),
+    ]),
+    sub('Autres favoris', [
+      link('Radio-Canada', 'https://ici.radio-canada.ca/', 3),
+      link('MétéoMédia', 'https://www.meteomedia.com/', 2),
+    ]),
+  ]);
+  B[rootId].title = '';
+
+  const hydrate = (id) => {
+    const n = { ...B[id] };
+    if (n.children) n.children = n.children.map(hydrate);
+    return n;
+  };
+  const noop = () => ({ addListener() {}, removeListener() {} });
+
+  /* Mise en page pré-remplie pour l'aperçu */
+  const ids = Object.values(B);
+  const byTitle = (t) => ids.find((n) => n.title === t && !n.url)?.id ?? null;
+  const preset = {
+    version: 1,
+    theme: { mode: 'dark', accent: '#e3a008', density: 'comfy', radius: 6, showGrid: false, showLabels: true, wallpaperDim: 55 },
+    layout: { cols: 12, gap: 14, row: 132, maxWidth: 1440 },
+    search: { engine: 'https://www.google.com/search?q=%s', openIn: 'current' },
+    widgets: [
+      { id: 'w1', type: 'bookmarks', w: 5, h: 3, settings: { folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev', view: 'tiles', tile: 78, icon: 26, sort: 'manual', limit: 0, openIn: 'current', showCrumbs: true } },
+      { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+      { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false } },
+      { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
+      { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'tiles', tile: 68, icon: 24, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+      { id: 'w6', type: 'bookmarks', w: 3, h: 2, settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'compact', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+      { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
+    ],
+  };
+
+  const mem = {};
+  try {
+    const saved = localStorage.getItem('atelier-preview');
+    Object.assign(mem, saved ? JSON.parse(saved) : { config: preset });
+  } catch { Object.assign(mem, { config: preset }); }
+  const persist = () => { try { localStorage.setItem('atelier-preview', JSON.stringify(mem)); } catch {} };
+
+  window.chrome = {
+    runtime: { getURL: (p) => 'preview://' + p },
+    storage: {
+      local: {
+        async get(keys) {
+          const list = keys == null ? Object.keys(mem) : [].concat(keys);
+          return Object.fromEntries(list.filter((k) => k in mem).map((k) => [k, mem[k]]));
+        },
+        async set(obj) { Object.assign(mem, obj); persist(); },
+        async remove(k) { [].concat(k).forEach((x) => delete mem[x]); persist(); },
+        async getBytesInUse() { return JSON.stringify(mem).length; },
+      },
+      onChanged: noop(),
+    },
+    bookmarks: {
+      async getTree() { return [hydrate(rootId)]; },
+      async get(id) { return B[id] ? [{ ...B[id] }] : []; },
+      async getChildren(id) { return (B[id]?.children || []).map((c) => ({ ...B[c] })); },
+      async search({ query }) {
+        const q = String(query).toLowerCase();
+        return Object.values(B).filter((b) => b.url && (b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q)));
+      },
+      onCreated: noop(), onRemoved: noop(), onChanged: noop(), onMoved: noop(),
+    },
+    topSites: {
+      async get() {
+        return [
+          { title: 'Gmail', url: 'https://mail.google.com/' },
+          { title: 'GitHub', url: 'https://github.com/' },
+          { title: 'YouTube', url: 'https://www.youtube.com/' },
+          { title: 'Claude', url: 'https://claude.ai/' },
+          { title: 'Cloudflare', url: 'https://dash.cloudflare.com/' },
+          { title: 'Hostinger', url: 'https://hpanel.hostinger.com/' },
+          { title: 'Stripe', url: 'https://dashboard.stripe.com/' },
+          { title: 'Figma', url: 'https://www.figma.com/' },
+        ];
+      },
+    },
+    tabs: { create({ url }) { window.open(url, '_blank', 'noopener'); } },
+  };
+
+  /* Dans l'extension, Chrome sert les favicons via /_favicon/.
+     Ici on passe par un service public pour que l'aperçu ressemble au vrai. */
+  window.__previewFavicon = (pageUrl, size) => {
+    try {
+      return `https://www.google.com/s2/favicons?domain=${new URL(pageUrl).hostname}&sz=${size >= 32 ? 64 : 32}`;
+    } catch { return ''; }
+  };
+})();
+
+</script>
+<script>
+(function(){
+
+/* ==== js/store.js ==== */
+/* Config : lecture/écriture dans chrome.storage.local + abonnements.
+   Le fond d'écran vit dans une clé séparée pour garder l'export léger. */
+
+const KEY = 'config';
+const WALL = 'wallpaper';
+const SCHEMA_VERSION = 1;
+
+const DEFAULT_CONFIG = {
+  version: SCHEMA_VERSION,
+  theme: {
+    mode: 'dark',
+    accent: '#e3a008',
+    density: 'comfy',
+    radius: 6,
+    showGrid: false,
+    showLabels: true,
+    wallpaperDim: 55,
+  },
+  layout: { cols: 12, gap: 14, row: 132, maxWidth: 1440 },
+  search: {
+    engine: 'https://www.google.com/search?q=%s',
+    openIn: 'current',
+  },
+  widgets: [],
+};
+
+function uid() {
+  return 'w' + Math.random().toString(36).slice(2, 9);
+}
+
+function makeWidget(type, settings = {}, size = {}) {
+  return {
+    id: uid(),
+    type,
+    w: size.w ?? 3,
+    h: size.h ?? 2,
+    settings,
+  };
+}
+
+function migrate(cfg) {
+  if (!cfg || typeof cfg !== 'object') return structuredClone(DEFAULT_CONFIG);
+  // Fusion superficielle par section : les nouvelles clés d'une version
+  // future arrivent avec leur valeur par défaut sans écraser l'existant.
+  const out = structuredClone(DEFAULT_CONFIG);
+  for (const k of ['theme', 'layout', 'search']) {
+    out[k] = { ...out[k], ...(cfg[k] || {}) };
+  }
+  out.widgets = Array.isArray(cfg.widgets) ? cfg.widgets : [];
+  out.widgets = out.widgets
+    .filter((w) => w && typeof w.type === 'string')
+    .map((w) => ({
+      id: w.id || uid(),
+      type: w.type,
+      w: clamp(+w.w || 3, 1, 12),
+      h: clamp(+w.h || 2, 1, 6),
+      settings: w.settings && typeof w.settings === 'object' ? w.settings : {},
+    }));
+  out.version = SCHEMA_VERSION;
+  return out;
+}
+
+function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
+}
+
+const listeners = new Set();
+
+const store = {
+  data: structuredClone(DEFAULT_CONFIG),
+  wallpaper: null,
+  /* Compteur d'écritures locales : chrome.storage.onChanged se déclenche
+     aussi dans l'onglet qui écrit, on ne veut pas recharger pour rien. */
+  selfWrites: 0,
+
+  async load() {
+    const got = await chrome.storage.local.get([KEY, WALL]);
+    this.data = migrate(got[KEY]);
+    this.wallpaper = got[WALL] || null;
+    return this.data;
+  },
+
+  /** Persiste et notifie. `silent` évite le re-rendu complet (ex. autosave notes). */
+  async save({ silent = false } = {}) {
+    this.selfWrites++;
+    await chrome.storage.local.set({ [KEY]: this.data });
+    if (!silent) listeners.forEach((fn) => fn(this.data));
+  },
+
+  async setWallpaper(dataUrl) {
+    this.wallpaper = dataUrl;
+    this.selfWrites++;
+    if (dataUrl) await chrome.storage.local.set({ [WALL]: dataUrl });
+    else await chrome.storage.local.remove(WALL);
+    listeners.forEach((fn) => fn(this.data));
+  },
+
+  on(fn) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  },
+
+  emit() {
+    listeners.forEach((fn) => fn(this.data));
+  },
+
+  widget(id) {
+    return this.data.widgets.find((w) => w.id === id);
+  },
+
+  async patchWidget(id, patch, opts) {
+    const w = this.widget(id);
+    if (!w) return;
+    Object.assign(w, patch);
+    await this.save(opts);
+  },
+
+  async patchSettings(id, patch, opts) {
+    const w = this.widget(id);
+    if (!w) return;
+    w.settings = { ...w.settings, ...patch };
+    await this.save(opts);
+  },
+
+  async addWidget(w) {
+    this.data.widgets.push(w);
+    await this.save();
+    return w;
+  },
+
+  async removeWidget(id) {
+    this.data.widgets = this.data.widgets.filter((w) => w.id !== id);
+    await this.save();
+  },
+
+  async reorder(ids) {
+    const map = new Map(this.data.widgets.map((w) => [w.id, w]));
+    this.data.widgets = ids.map((id) => map.get(id)).filter(Boolean);
+    await this.save({ silent: true });
+  },
+
+  async bytesInUse() {
+    try {
+      return await chrome.storage.local.getBytesInUse(null);
+    } catch {
+      return 0;
+    }
+  },
+
+  export() {
+    return JSON.stringify({ ...this.data, version: SCHEMA_VERSION }, null, 2);
+  },
+
+  async import(json) {
+    const parsed = JSON.parse(json);
+    this.data = migrate(parsed);
+    await this.save();
+  },
+
+  async reset() {
+    this.data = structuredClone(DEFAULT_CONFIG);
+    await chrome.storage.local.remove(WALL);
+    this.wallpaper = null;
+    await this.save();
+  },
+};
+
+/* ==== js/registry.js ==== */
+/* Registre des modules.
+   Pour en ajouter un : crée js/widgets/mon-module.js, appelle defineWidget(),
+   puis importe le fichier dans js/app.js. C'est tout. */
+
+const defs = new Map();
+
+/**
+ * @param {object} def
+ * @param {string} def.type            identifiant stable, stocké dans la config
+ * @param {string} def.name            nom affiché dans « Ajouter un module »
+ * @param {string} def.blurb           une ligne de description
+ * @param {{w:number,h:number}} def.defaultSize
+ * @param {object} def.defaults        réglages par défaut
+ * @param {Array}  def.fields          schéma du formulaire de réglages
+ * @param {(w:object)=>string} def.title  titre affiché dans l'en-tête
+ * @param {(body:HTMLElement, ctx:object)=>(void|Function)} def.mount
+ *        rend le contenu ; peut retourner une fonction de nettoyage
+ */
+function defineWidget(def) {
+  defs.set(def.type, {
+    defaultSize: { w: 3, h: 2 },
+    defaults: {},
+    fields: [],
+    title: (w) => def.name,
+    ...def,
+  });
+}
+
+const getWidget = (type) => defs.get(type);
+const allWidgets = () => [...defs.values()];
+
+/* ==== js/ui.js ==== */
+/* Petits utilitaires partagés. Rien ici ne connaît la config. */
+
+/** el('div', {class:'x', onclick:fn}, [enfants|texte]) */
+function el(tag, attrs = {}, kids = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else if (k === 'html') node.innerHTML = v; // réservé au markup statique
+    else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of [].concat(kids)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+}
+
+function clear(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+/** Favicon servi par Chrome. Exige la permission "favicon" dans le manifeste. */
+function faviconUrl(pageUrl, size = 32) {
+  if (window.__previewFavicon) return window.__previewFavicon(pageUrl, size);
+  const u = new URL(chrome.runtime.getURL('/_favicon/'));
+  u.searchParams.set('pageUrl', pageUrl);
+  u.searchParams.set('size', String(size));
+  return u.toString();
+}
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+/** Première lettre utilisable, pour la pastille de repli. */
+function initial(title, url) {
+  const src = (title || hostOf(url) || '?').trim();
+  return (src[0] || '?').toUpperCase();
+}
+
+/** Ouvre un lien selon la préférence, en respectant ctrl/cmd/molette. */
+function openLink(url, openIn, ev) {
+  const newTab = openIn === 'new' || ev?.ctrlKey || ev?.metaKey || ev?.button === 1;
+  if (newTab) {
+    ev?.preventDefault();
+    if (chrome.tabs?.create) chrome.tabs.create({ url, active: !ev?.shiftKey });
+    else window.open(url, '_blank', 'noopener');
+  }
+  // sinon : on laisse le <a href> faire son travail
+}
+
+/* ---------- Arbre des favoris ---------- */
+
+/** Liste plate des dossiers, avec chemin lisible. */
+async function listFolders() {
+  const tree = await chrome.bookmarks.getTree();
+  const out = [];
+  const walk = (node, depth, path) => {
+    for (const child of node.children || []) {
+      if (child.url) continue;
+      const label = child.title || '(sans nom)';
+      const full = path ? `${path} / ${label}` : label;
+      out.push({ id: child.id, title: label, path: full, depth });
+      walk(child, depth + 1, full);
+    }
+  };
+  walk(tree[0], 0, '');
+  return out;
+}
+
+/** Retrouve un dossier par son chemin — utile après un import sur un autre profil. */
+async function findFolderByPath(path) {
+  if (!path) return null;
+  const folders = await listFolders();
+  return folders.find((f) => f.path === path) || null;
+}
+
+async function countBookmarks() {
+  const tree = await chrome.bookmarks.getTree();
+  let n = 0;
+  const walk = (node) => {
+    for (const c of node.children || []) {
+      if (c.url) n++;
+      else walk(c);
+    }
+  };
+  walk(tree[0]);
+  return n;
+}
+
+/* ---------- Modale ---------- */
+
+const root = () => document.getElementById('modalRoot');
+
+function openModal({ title, body, footer, onClose }) {
+  const host = root();
+  clear(host);
+  host.hidden = false;
+
+  const onBackdrop = (e) => { if (e.target === host) close(); };
+  const close = () => {
+    host.hidden = true;
+    clear(host);
+    document.removeEventListener('keydown', onKey);
+    host.removeEventListener('click', onBackdrop);
+    onClose?.();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); close(); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  const modal = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, [
+    el('div', { class: 'modal-head' }, [
+      el('h2', { text: title }),
+      el('button', { class: 'btn btn-ghost', type: 'button', 'aria-label': 'Fermer', onclick: close, text: '✕' }),
+    ]),
+    el('div', { class: 'modal-body' }, [body]),
+    footer ? el('div', { class: 'modal-foot' }, [footer]) : null,
+  ]);
+
+  host.addEventListener('click', onBackdrop);
+  host.append(modal);
+  modal.querySelector('input, select, textarea, button')?.focus();
+  return close;
+}
+
+/* ---------- Toast ---------- */
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...a) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...a), ms);
+  };
+}
+
+/* ==== js/settings.js ==== */
+const ACCENTS = ['#e3a008', '#5eead4', '#f97362', '#8b9dff', '#b5cc4a', '#e879bd', '#9aa3af'];
+const ENGINES = [
+  ['https://www.google.com/search?q=%s', 'Google'],
+  ['https://duckduckgo.com/?q=%s', 'DuckDuckGo'],
+  ['https://www.bing.com/search?q=%s', 'Bing'],
+  ['https://search.brave.com/search?q=%s', 'Brave'],
+  ['https://www.perplexity.ai/search?q=%s', 'Perplexity'],
+];
+
+/* ============================================================
+   Rendu de formulaire piloté par schéma
+   ============================================================ */
+
+let folderCache = null;
+
+// L'utilisateur peut créer un dossier dans un autre onglet pendant que la modale est ouverte.
+for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
+  chrome.bookmarks[ev].addListener(() => { folderCache = null; });
+}
+
+async function renderFields(fields, values, onChange) {
+  const host = el('div');
+
+  const rebuild = async () => {
+    clear(host);
+    for (const f of fields) {
+      if (f.when && !f.when(values)) continue;
+      host.append(await renderField(f, values, async (key, val) => {
+        values[key] = val;
+        await onChange(key, val);
+        if (f.gates) rebuild();   // ce champ pilote l'affichage d'autres champs
+      }));
+    }
+  };
+
+  await rebuild();
+  return host;
+}
+
+async function renderField(f, values, set) {
+  const id = `f_${f.key}_${Math.random().toString(36).slice(2, 6)}`;
+  const val = values[f.key];
+
+  if (f.type === 'boolean') {
+    const input = el('input', { type: 'checkbox', id, checked: !!val });
+    input.addEventListener('change', () => set(f.key, input.checked));
+    return el('div', { class: 'field field-inline' }, [
+      el('label', { for: id, text: f.label }), input,
+    ]);
+  }
+
+  let control;
+
+  if (f.type === 'select') {
+    control = el('select', { id });
+    for (const [v, label] of f.options) {
+      control.append(el('option', { value: v, text: label, selected: String(v) === String(val) }));
+    }
+    control.addEventListener('change', () => set(f.key, control.value));
+  } else if (f.type === 'folder') {
+    folderCache ??= await listFolders();
+    control = el('select', { id });
+    control.append(el('option', { value: '', text: '— choisir un dossier —' }));
+    for (const folder of folderCache) {
+      control.append(el('option', {
+        value: folder.id,
+        text: `${'\u00A0\u00A0'.repeat(folder.depth)}${folder.title}`,
+        selected: String(folder.id) === String(val),
+      }));
+    }
+    control.addEventListener('change', async () => {
+      const picked = folderCache.find((x) => x.id === control.value);
+      values.folderPath = picked?.path || '';
+      await set('folderPath', values.folderPath);
+      await set(f.key, control.value || null);
+    });
+  } else if (f.type === 'range') {
+    const out = el('span', { class: 'tb-val', text: String(val) });
+    control = el('input', {
+      type: 'range', id, min: f.min, max: f.max, step: f.step || 1, value: val,
+    });
+    control.addEventListener('input', () => { out.textContent = control.value; });
+    control.addEventListener('change', () => set(f.key, +control.value));
+    return el('div', { class: 'field' }, [
+      el('label', { for: id }, [f.label, ' ', out]),
+      control,
+      f.hint ? el('p', { class: 'field-hint', text: f.hint }) : null,
+    ]);
+  } else if (f.type === 'number') {
+    control = el('input', { type: 'number', id, min: f.min, max: f.max, value: val ?? 0 });
+    control.addEventListener('change', () => set(f.key, clamp(+control.value || 0, f.min ?? 0, f.max ?? 9999)));
+  } else if (f.type === 'color') {
+    control = el('input', { type: 'color', id, value: val || '#000000' });
+    control.addEventListener('change', () => set(f.key, control.value));
+  } else {
+    control = el('input', { type: 'text', id, value: val ?? '' });
+    control.addEventListener('change', () => set(f.key, control.value));
+  }
+
+  return el('div', { class: 'field' }, [
+    el('label', { for: id, text: f.label }),
+    control,
+    f.hint ? el('p', { class: 'field-hint', text: f.hint }) : null,
+  ]);
+}
+
+/* ============================================================
+   Réglages d'un module
+   ============================================================ */
+
+async function openWidgetSettings(widgetId) {
+  const widget = store.widget(widgetId);
+  const def = getWidget(widget?.type);
+  if (!widget || !def) return;
+
+  const values = { ...def.defaults, ...widget.settings };
+  const body = el('div');
+
+  body.append(await renderFields(def.fields, values, async () => {
+    await store.patchSettings(widget.id, values);
+  }));
+
+  body.append(el('p', { class: 'section-label', text: 'Dimensions' }));
+  const dims = el('div', { class: 'field-row' });
+  dims.append(
+    numberField('Largeur (colonnes)', widget.w, 1, store.data.layout.cols, (v) =>
+      store.patchWidget(widget.id, { w: v })),
+    numberField('Hauteur (rangées)', widget.h, 1, 6, (v) =>
+      store.patchWidget(widget.id, { h: v })),
+  );
+  body.append(dims);
+
+  const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+    el('button', {
+      class: 'btn btn-danger', type: 'button', text: 'Supprimer le module',
+      onclick: async () => { await store.removeWidget(widget.id); close(); toast('Module supprimé'); },
+    }),
+    el('span', { style: { flex: '1' } }),
+    el('button', { class: 'btn btn-primary', type: 'button', text: 'Fermer', onclick: () => close() }),
+  ]);
+
+  const close = openModal({ title: def.name, body, footer });
+}
+
+function numberField(label, value, min, max, onSet) {
+  const input = el('input', { type: 'number', min, max, value });
+  input.addEventListener('change', () => {
+    const v = clamp(+input.value || min, min, max);
+    input.value = v;
+    onSet(v);
+  });
+  return el('div', { class: 'field' }, [el('label', { text: label }), input]);
+}
+
+/* ============================================================
+   Ajouter un module
+   ============================================================ */
+
+function openAddWidget() {
+  const grid = el('div', { class: 'picker' });
+  for (const def of allWidgets()) {
+    grid.append(el('button', {
+      type: 'button',
+      onclick: async () => {
+        const w = makeWidget(def.type, { ...def.defaults }, def.defaultSize);
+        await store.addWidget(w);
+        close();
+        if (def.fields.length) openWidgetSettings(w.id);
+      },
+    }, [
+      el('strong', { text: def.name }),
+      el('small', { text: def.blurb }),
+    ]));
+  }
+  const close = openModal({ title: 'Ajouter un module', body: grid });
+}
+
+/* ============================================================
+   Réglages généraux
+   ============================================================ */
+
+async function openSettings() {
+  const t = store.data.theme;
+  const l = store.data.layout;
+  const s = store.data.search;
+  const body = el('div');
+
+  const save = () => store.save();
+
+  /* — Apparence — */
+  body.append(el('p', { class: 'section-label', text: 'Apparence' }));
+
+  body.append(await renderFields([
+    { key: 'mode', label: 'Thème', type: 'select', options: [['dark', 'Encre'], ['light', 'Papier']] },
+    { key: 'density', label: 'Densité', type: 'select', options: [['comfy', 'Confortable'], ['compact', 'Compacte']] },
+    { key: 'radius', label: 'Arrondi des coins', type: 'range', min: 0, max: 18 },
+    { key: 'showGrid', label: 'Papier millimétré visible', type: 'boolean' },
+    { key: 'showLabels', label: 'Titres sous les tuiles', type: 'boolean' },
+  ], t, save));
+
+  const swatches = el('div', { class: 'swatches' });
+  const custom = el('input', { type: 'color', value: t.accent });
+  const paint = (hex) => {
+    t.accent = hex;
+    custom.value = hex;
+    [...swatches.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.hex === hex)));
+    save();
+  };
+  for (const hex of ACCENTS) {
+    const b = el('button', {
+      class: 'swatch', type: 'button', 'data-hex': hex,
+      'aria-label': hex, 'aria-pressed': String(t.accent === hex),
+      style: { background: hex },
+      onclick: () => paint(hex),
+    });
+    swatches.append(b);
+  }
+  custom.addEventListener('change', () => paint(custom.value));
+  swatches.append(custom);
+  body.append(el('div', { class: 'field' }, [el('label', { text: 'Couleur d\'accent' }), swatches]));
+
+  /* — Fond — */
+  body.append(el('p', { class: 'section-label', text: 'Fond d\'écran' }));
+
+  const file = el('input', { type: 'file', accept: 'image/*' });
+  file.addEventListener('change', async () => {
+    const f = file.files?.[0];
+    if (!f) return;
+    try {
+      const dataUrl = await downscale(f, 2560, 0.82);
+      await store.setWallpaper(dataUrl);
+      toast('Fond d\'écran appliqué');
+    } catch {
+      toast('Image illisible');
+    }
+  });
+  body.append(el('div', { class: 'field' }, [el('label', { text: 'Image' }), file]));
+
+  body.append(await renderFields([
+    { key: 'wallpaperDim', label: 'Assombrissement', type: 'range', min: 0, max: 95 },
+  ], t, save));
+
+  if (store.wallpaper) {
+    body.append(el('button', {
+      class: 'btn', type: 'button', text: 'Retirer le fond',
+      onclick: async () => { await store.setWallpaper(null); toast('Fond retiré'); },
+    }));
+  }
+
+  /* — Grille — */
+  body.append(el('p', { class: 'section-label', text: 'Grille' }));
+  body.append(await renderFields([
+    { key: 'cols', label: 'Colonnes', type: 'range', min: 4, max: 16 },
+    { key: 'gap', label: 'Espacement (px)', type: 'range', min: 4, max: 32, step: 2 },
+    { key: 'row', label: 'Hauteur d\'une rangée (px)', type: 'range', min: 80, max: 240, step: 4 },
+    { key: 'maxWidth', label: 'Largeur max (px)', type: 'range', min: 900, max: 2400, step: 20 },
+  ], l, save));
+
+  /* — Recherche — */
+  body.append(el('p', { class: 'section-label', text: 'Recherche' }));
+  body.append(await renderFields([
+    {
+      key: 'engine', label: 'Moteur de repli', type: 'select', options: ENGINES,
+      hint: 'Utilisé quand ta recherche ne correspond à aucun favori.',
+    },
+    {
+      key: 'openIn', label: 'Ouvrir les résultats', type: 'select',
+      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
+    },
+  ], s, save));
+
+  /* — Données — */
+  body.append(el('p', { class: 'section-label', text: 'Données' }));
+  const bytes = await store.bytesInUse();
+  body.append(el('p', {
+    class: 'field-hint',
+    text: `Stockage local utilisé : ${(bytes / 1024).toFixed(0)} Ko. Tout reste sur cet appareil.`,
+  }));
+
+  const importFile = el('input', { type: 'file', accept: 'application/json,.json', style: { display: 'none' } });
+  importFile.addEventListener('change', async () => {
+    const f = importFile.files?.[0];
+    if (!f) return;
+    try {
+      await store.import(await f.text());
+      toast('Configuration importée');
+    } catch {
+      toast('Fichier invalide');
+    }
+  });
+
+  body.append(el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' } }, [
+    el('button', { class: 'btn', type: 'button', text: 'Exporter', onclick: exportConfig }),
+    el('button', { class: 'btn', type: 'button', text: 'Importer', onclick: () => importFile.click() }),
+    el('button', {
+      class: 'btn btn-danger', type: 'button', text: 'Tout réinitialiser',
+      onclick: async () => {
+        if (confirm('Remettre la configuration à zéro ? Les favoris de Chrome ne sont pas touchés.')) {
+          await store.reset();
+          toast('Configuration réinitialisée');
+        }
+      },
+    }),
+    importFile,
+  ]));
+
+  openModal({ title: 'Réglages', body });
+}
+
+function exportConfig() {
+  const blob = new Blob([store.export()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: `atelier-${new Date().toISOString().slice(0, 10)}.json` });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Réduit une image avant stockage : une photo 8 Mo remplit vite le quota. */
+function downscale(file, maxW, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        if (scale === 1 && file.size < 900_000) return resolve(reader.result);
+        const canvas = el('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ==== js/widgets/bookmarks.js ==== */
+defineWidget({
+  type: 'bookmarks',
+  name: 'Dossier de favoris',
+  blurb: 'Affiche un dossier, avec navigation dans les sous-dossiers.',
+  defaultSize: { w: 4, h: 2 },
+  defaults: {
+    folderId: null,
+    folderPath: '',
+    view: 'tiles',
+    tile: 76,
+    icon: 26,
+    limit: 0,
+    openIn: 'current',
+    sort: 'manual',
+    showCrumbs: true,
+  },
+  fields: [
+    { key: 'folderId', label: 'Dossier', type: 'folder' },
+    {
+      key: 'view', label: 'Affichage', type: 'select', gates: true,
+      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense']],
+    },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
+    {
+      key: 'sort', label: 'Tri', type: 'select',
+      options: [['manual', 'Ordre du dossier'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
+    },
+    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200 },
+    {
+      key: 'openIn', label: 'Ouvrir les liens', type: 'select',
+      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
+    },
+    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean' },
+  ],
+
+  title(w) {
+    return w.settings.folderPath?.split(' / ').pop() || 'Favoris';
+  },
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    let stack = [];          // navigation interne, non persistée
+    let alive = true;
+
+    async function resolveRoot() {
+      if (s.folderId) {
+        try {
+          const [node] = await chrome.bookmarks.get(String(s.folderId));
+          if (node) return node.id;
+        } catch { /* id mort : on tente le chemin */ }
+      }
+      if (s.folderPath) {
+        const found = await findFolderByPath(s.folderPath);
+        if (found) {
+          ctx.update({ folderId: found.id });   // auto-réparation après import
+          return found.id;
+        }
+      }
+      return null;
+    }
+
+    async function render() {
+      if (!alive) return;
+      clear(body);
+
+      const rootId = await resolveRoot();
+      if (!rootId) {
+        body.append(el('p', {
+          class: 'note',
+          text: s.folderId || s.folderPath
+            ? 'Dossier introuvable. Choisis-en un autre dans les réglages du module.'
+            : 'Aucun dossier choisi. Ouvre les réglages du module.',
+        }));
+        return;
+      }
+
+      const currentId = stack.length ? stack[stack.length - 1].id : rootId;
+      let children;
+      try {
+        children = await chrome.bookmarks.getChildren(currentId);
+      } catch {
+        body.append(el('p', { class: 'note', text: 'Lecture du dossier impossible.' }));
+        return;
+      }
+
+      if (s.showCrumbs && stack.length) {
+        const crumbs = el('nav', { class: 'bm-crumbs' });
+        crumbs.append(el('button', {
+          type: 'button', text: '← racine',
+          onclick: () => { stack = []; render(); },
+        }));
+        stack.forEach((node, i) => {
+          crumbs.append(el('span', { text: '/' }));
+          crumbs.append(el('button', {
+            type: 'button', text: node.title || '(sans nom)',
+            onclick: () => { stack = stack.slice(0, i + 1); render(); },
+          }));
+        });
+        body.append(crumbs);
+      }
+
+      let items = children.slice();
+      if (s.sort === 'alpha') {
+        items.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'));
+      } else if (s.sort === 'recent') {
+        items.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+      }
+      // Les dossiers d'abord, toujours.
+      items.sort((a, b) => (!!a.url) - (!!b.url));
+      if (s.limit > 0) items = items.slice(0, s.limit);
+
+      if (!items.length) {
+        body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+        return;
+      }
+
+      const tiles = s.view === 'tiles';
+      const wrap = el('div', {
+        class: tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
+      });
+      if (tiles) {
+        wrap.style.setProperty('--tile', `${s.tile}px`);
+        wrap.style.setProperty('--icon', `${s.icon}px`);
+      }
+
+      for (const node of items) {
+        wrap.append(node.url ? linkNode(node, tiles) : folderNode(node, tiles));
+      }
+      body.append(wrap);
+    }
+
+    function iconFor(node, tiles) {
+      if (!node.url) {
+        return el('span', { class: 'glyph', text: '▸' });
+      }
+      const img = el('img', {
+        src: faviconUrl(node.url, tiles ? Math.max(32, s.icon * 2) : 32),
+        alt: '', loading: 'lazy',
+      });
+      img.addEventListener('error', () => {
+        img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
+      });
+      return img;
+    }
+
+    function linkNode(node, tiles) {
+      // textContent partout : un titre de favori peut contenir du HTML.
+      const label = node.title || hostOf(node.url);
+      const a = el('a', {
+        class: tiles ? 'tile' : 'row',
+        href: node.url,
+        title: `${label}\n${node.url}`,
+        onclick: (e) => openLink(node.url, s.openIn, e),
+        onauxclick: (e) => openLink(node.url, s.openIn, e),
+      });
+      a.append(iconFor(node, tiles));
+      a.append(el('span', { class: 'label', text: label }));
+      if (!tiles) a.append(el('span', { class: 'host', text: hostOf(node.url) }));
+      return a;
+    }
+
+    function folderNode(node, tiles) {
+      const b = el('button', {
+        class: tiles ? 'tile' : 'row',
+        type: 'button',
+        title: node.title,
+        style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
+        onclick: () => { stack.push(node); render(); },
+      });
+      b.append(el('span', { class: 'glyph', text: '▸' }));
+      b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
+      return b;
+    }
+
+    // Rafraîchit quand les favoris changent ailleurs dans Chrome.
+    const refresh = () => render();
+    chrome.bookmarks.onCreated.addListener(refresh);
+    chrome.bookmarks.onRemoved.addListener(refresh);
+    chrome.bookmarks.onChanged.addListener(refresh);
+    chrome.bookmarks.onMoved.addListener(refresh);
+
+    render();
+
+    return () => {
+      alive = false;
+      chrome.bookmarks.onCreated.removeListener(refresh);
+      chrome.bookmarks.onRemoved.removeListener(refresh);
+      chrome.bookmarks.onChanged.removeListener(refresh);
+      chrome.bookmarks.onMoved.removeListener(refresh);
+    };
+  },
+});
+
+/* ==== js/widgets/misc.js ==== */
+/* ---------- Horloge ---------- */
+
+defineWidget({
+  type: 'clock',
+  name: 'Horloge',
+  blurb: 'Heure et date, format québécois.',
+  defaultSize: { w: 3, h: 1 },
+  defaults: { seconds: false, hour12: false, date: true, label: 'Horloge' },
+  fields: [
+    { key: 'label', label: 'Titre du module', type: 'text' },
+    { key: 'hour12', label: 'Format 12 h (AM/PM)', type: 'boolean' },
+    { key: 'seconds', label: 'Afficher les secondes', type: 'boolean' },
+    { key: 'date', label: 'Afficher la date', type: 'boolean' },
+  ],
+  title: (w) => w.settings.label || 'Horloge',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    const time = el('div', { class: 'clock-time', text: '--:--' });
+    const date = el('div', { class: 'clock-date' });
+    const wrap = el('div', { class: 'clock' }, [time, s.date ? date : null]);
+    clear(body);
+    body.append(wrap);
+
+    const tf = new Intl.DateTimeFormat('fr-CA', {
+      hour: '2-digit', minute: '2-digit',
+      second: s.seconds ? '2-digit' : undefined,
+      hour12: !!s.hour12,
+    });
+    const df = new Intl.DateTimeFormat('fr-CA', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    });
+
+    const tick = () => {
+      const now = new Date();
+      time.textContent = tf.format(now);
+      if (s.date) date.textContent = df.format(now);
+    };
+    tick();
+    const id = setInterval(tick, s.seconds ? 1000 : 15000);
+    return () => clearInterval(id);
+  },
+});
+
+/* ---------- Bloc-notes ---------- */
+
+defineWidget({
+  type: 'notes',
+  name: 'Bloc-notes',
+  blurb: 'Un carré de texte sauvegardé automatiquement.',
+  defaultSize: { w: 3, h: 2 },
+  defaults: { label: 'Notes', text: '' },
+  fields: [{ key: 'label', label: 'Titre du module', type: 'text' }],
+  title: (w) => w.settings.label || 'Notes',
+
+  mount(body, ctx) {
+    const ta = el('textarea', {
+      class: 'notes-area',
+      placeholder: 'Écris ici. Sauvegarde automatique.',
+      spellcheck: 'false',
+    });
+    ta.value = ctx.settings.text || '';
+    // silent: true — on ne veut pas re-rendre la feuille à chaque frappe.
+    const save = debounce(() => ctx.update({ text: ta.value }, { silent: true }), 400);
+    ta.addEventListener('input', save);
+    clear(body);
+    body.append(ta);
+    // Au démontage on écrit tout de suite : le debounce en attente serait perdu.
+    return () => ctx.update({ text: ta.value }, { silent: true });
+  },
+});
+
+/* ---------- Sites fréquents ---------- */
+
+defineWidget({
+  type: 'topsites',
+  name: 'Sites fréquents',
+  blurb: 'Les sites que Chrome te voit visiter le plus.',
+  defaultSize: { w: 4, h: 2 },
+  defaults: { limit: 10, view: 'tiles', tile: 76, icon: 26, openIn: 'current' },
+  fields: [
+    { key: 'view', label: 'Affichage', type: 'select', gates: true, options: [['tiles', 'Tuiles'], ['list', 'Liste']] },
+    { key: 'limit', label: 'Nombre max', type: 'number', min: 1, max: 30 },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
+    {
+      key: 'openIn', label: 'Ouvrir les liens', type: 'select',
+      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
+    },
+  ],
+  title: () => 'Sites fréquents',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    let alive = true;
+
+    chrome.topSites.get().then((sites) => {
+      if (!alive) return;
+      clear(body);
+      if (!sites?.length) {
+        body.append(el('p', { class: 'note', text: 'Chrome n\'a pas encore assez d\'historique.' }));
+        return;
+      }
+      const tiles = s.view === 'tiles';
+      const wrap = el('div', { class: tiles ? 'bm-tiles' : 'bm-list' });
+      if (tiles) {
+        wrap.style.setProperty('--tile', `${s.tile}px`);
+        wrap.style.setProperty('--icon', `${s.icon}px`);
+      }
+      for (const site of sites.slice(0, s.limit)) {
+        const label = site.title || hostOf(site.url);
+        const a = el('a', {
+          class: tiles ? 'tile' : 'row',
+          href: site.url,
+          title: `${label}\n${site.url}`,
+          onclick: (e) => openLink(site.url, s.openIn, e),
+        });
+        const img = el('img', { src: faviconUrl(site.url, tiles ? 48 : 32), alt: '', loading: 'lazy' });
+        img.addEventListener('error', () => {
+          img.replaceWith(el('span', { class: 'glyph', text: initial(site.title, site.url) }));
+        });
+        a.append(img, el('span', { class: 'label', text: label }));
+        if (!tiles) a.append(el('span', { class: 'host', text: hostOf(site.url) }));
+        wrap.append(a);
+      }
+      body.append(wrap);
+    }).catch(() => {
+      if (alive) {
+        clear(body);
+        body.append(el('p', { class: 'note', text: 'Accès aux sites fréquents refusé.' }));
+      }
+    });
+
+    return () => { alive = false; };
+  },
+});
+
+/* ==== js/app.js ==== */
+/* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
+
+
+const $ = (id) => document.getElementById(id);
+const grid = $('grid');
+const mounted = new Map();      // id -> fonction de nettoyage
+let editing = false;
+let lastSig = '';
+
+/* ============================================================
+   Thème
+   ============================================================ */
+
+function applyTheme() {
+  const { theme: t, layout: l } = store.data;
+  const r = document.documentElement;
+
+  r.dataset.mode = t.mode;
+  r.style.setProperty('--accent', t.accent);
+  r.style.setProperty('--accent-ink', contrastInk(t.accent));
+  r.style.setProperty('--radius', `${t.radius}px`);
+  r.style.setProperty('--cols', l.cols);
+  r.style.setProperty('--gap', `${l.gap}px`);
+  r.style.setProperty('--row', `${l.row}px`);
+  r.style.setProperty('--maxw', `${l.maxWidth}px`);
+  r.style.setProperty('--wall-dim', t.wallpaperDim);
+
+  document.body.dataset.density = t.density;
+  document.body.dataset.labels = t.showLabels ? 'on' : 'off';
+  document.body.classList.toggle('show-grid', !!t.showGrid);
+  document.body.classList.toggle('has-wallpaper', !!store.wallpaper);
+  $('wallpaper').style.backgroundImage = store.wallpaper ? `url("${store.wallpaper}")` : '';
+
+  // Règle de colonnes du mode plan
+  const ruler = $('ruler');
+  if (ruler.childElementCount !== l.cols) {
+    clear(ruler);
+    for (let i = 0; i < l.cols; i++) ruler.append(el('span', { text: String(i + 1) }));
+  }
+}
+
+/** Noir ou blanc au-dessus de l'accent, selon sa luminance. */
+function contrastInk(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#14161a';
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#14161a' : '#ffffff';
+}
+
+/* ============================================================
+   Rendu de la feuille
+   ============================================================ */
+
+function sig() {
+  return JSON.stringify(store.data.widgets);
+}
+
+function render() {
+  applyTheme();
+  const s = sig();
+  if (s === lastSig) return;   // changement de thème seul : pas de remontage
+  lastSig = s;
+  rebuild();
+}
+
+function rebuild() {
+  for (const stop of mounted.values()) { try { stop?.(); } catch { /* ignore */ } }
+  mounted.clear();
+  clear(grid);
+
+  const list = store.data.widgets;
+  $('empty').hidden = list.length > 0;
+
+  list.forEach((w, i) => {
+    const node = buildWidget(w);
+    node.style.animationDelay = `${Math.min(i, 8) * 28}ms`;
+    grid.append(node);
+  });
+}
+
+function buildWidget(w) {
+  const def = getWidget(w.type);
+  const node = el('article', { class: 'widget', 'data-id': w.id });
+  node.style.setProperty('--w', w.w);
+  node.style.setProperty('--h', w.h);
+
+  const head = el('div', { class: 'widget-head' }, [
+    el('span', { class: 'widget-title', text: def ? def.title(w) : 'Module inconnu' }),
+    el('span', { class: 'widget-dim', text: `${w.w}×${w.h}` }),
+    el('div', { class: 'widget-tools' }, [
+      def ? el('button', {
+        class: 'btn btn-ghost', type: 'button', title: 'Réglages du module', text: '⚙',
+        onclick: () => openWidgetSettings(w.id),
+      }) : null,
+      el('button', {
+        class: 'btn btn-ghost btn-danger', type: 'button', title: 'Retirer', text: '✕',
+        onclick: () => store.removeWidget(w.id),
+      }),
+    ]),
+  ]);
+
+  const body = el('div', { class: 'widget-body' });
+  node.append(head, body, el('div', { class: 'handle', title: 'Redimensionner' }));
+  wireDrag(node, head);
+  wireResize(node, w);
+
+  if (!def) {
+    body.append(el('p', { class: 'note', text: `Type « ${w.type} » non enregistré.` }));
+    return node;
+  }
+
+  const ctx = {
+    widget: w,
+    settings: { ...def.defaults, ...w.settings },
+    config: store.data,
+    update: (patch, opts) => {
+      Object.assign(ctx.settings, patch);
+      return store.patchSettings(w.id, patch, opts);
+    },
+  };
+
+  try {
+    mounted.set(w.id, def.mount(body, ctx));
+  } catch (err) {
+    console.error('[Atelier]', w.type, err);
+    body.append(el('p', { class: 'note', text: 'Ce module a planté. Voir la console.' }));
+  }
+
+  return node;
+}
+
+/* ============================================================
+   Déplacement
+   ============================================================ */
+
+let dragged = null;
+
+function wireDrag(node, head) {
+  head.addEventListener('pointerdown', () => {
+    node.draggable = editing;   // draggable seulement en mode plan
+  });
+  node.addEventListener('dragstart', (e) => {
+    if (!editing) return e.preventDefault();
+    dragged = node;
+    node.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', node.dataset.id);
+  });
+  node.addEventListener('dragend', async () => {
+    node.classList.remove('dragging');
+    node.draggable = false;
+    dragged = null;
+    const ids = [...grid.querySelectorAll('.widget')].map((n) => n.dataset.id);
+    await store.reorder(ids);
+    lastSig = sig();
+  });
+}
+
+grid.addEventListener('dragover', (e) => {
+  if (!dragged) return;
+  e.preventDefault();
+  const ref = nearestSlot(e.clientX, e.clientY);
+  if (ref === dragged) return;
+  if (ref) grid.insertBefore(dragged, ref);
+  else grid.append(dragged);
+});
+
+function nearestSlot(x, y) {
+  const nodes = [...grid.querySelectorAll('.widget:not(.dragging)')];
+  let best = null;
+  let bestDist = Infinity;
+  for (const n of nodes) {
+    const b = n.getBoundingClientRect();
+    const d = Math.hypot(x - (b.left + b.width / 2), y - (b.top + b.height / 2));
+    if (d < bestDist) { bestDist = d; best = n; }
+  }
+  if (!best) return null;
+  const b = best.getBoundingClientRect();
+  const sameRow = Math.abs(y - (b.top + b.height / 2)) < b.height / 2;
+  const before = sameRow ? x < b.left + b.width / 2 : y < b.top + b.height / 2;
+  return before ? best : best.nextElementSibling;
+}
+
+/* ============================================================
+   Redimensionnement
+   ============================================================ */
+
+function wireResize(node, w) {
+  const handle = node.querySelector('.handle');
+  handle.addEventListener('pointerdown', (e) => {
+    if (!editing) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    node.classList.add('resizing');
+
+    const { cols, gap, row } = store.data.layout;
+    const gridW = grid.getBoundingClientRect().width;
+    const colUnit = (gridW - gap * (cols - 1)) / cols + gap;
+    const rowUnit = row + gap;
+    const start = { x: e.clientX, y: e.clientY, w: w.w, h: w.h };
+    const dim = node.querySelector('.widget-dim');
+
+    const move = (ev) => {
+      const nw = clamp(Math.round(start.w + (ev.clientX - start.x) / colUnit), 1, cols);
+      const nh = clamp(Math.round(start.h + (ev.clientY - start.y) / rowUnit), 1, 6);
+      if (nw === w.w && nh === w.h) return;
+      w.w = nw; w.h = nh;
+      node.style.setProperty('--w', nw);
+      node.style.setProperty('--h', nh);
+      dim.textContent = `${nw}×${nh}`;
+    };
+
+    const up = async () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      node.classList.remove('resizing');
+      await store.patchWidget(w.id, { w: w.w, h: w.h }, { silent: true });
+      lastSig = sig();
+    };
+
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  });
+}
+
+/* ============================================================
+   Mode plan
+   ============================================================ */
+
+function setEditing(on) {
+  editing = on;
+  document.body.classList.toggle('is-editing', on);
+  $('dock').hidden = !on;
+  $('btnEdit').setAttribute('aria-pressed', String(on));
+  if (!on) grid.querySelectorAll('.widget').forEach((n) => { n.draggable = false; });
+}
+
+/* ============================================================
+   Recherche
+   ============================================================ */
+
+const omni = $('omni');
+const results = $('omniResults');
+let hits = [];
+let cursor = -1;
+
+const search = debounce(async (q) => {
+  if (!q.trim()) return hideResults();
+  let found = [];
+  try {
+    found = await chrome.bookmarks.search({ query: q });
+  } catch { /* rien */ }
+  hits = found.filter((n) => n.url).slice(0, 8);
+  cursor = hits.length ? 0 : -1;
+  drawResults(q);
+}, 90);
+
+function drawResults(q) {
+  clear(results);
+  results.hidden = false;
+
+  if (!hits.length) {
+    results.append(el('li', {
+      class: 'omni-empty',
+      text: `Aucun favori. Entrée pour chercher « ${q} » sur le web.`,
+    }));
+    return;
+  }
+
+  hits.forEach((n, i) => {
+    const img = el('img', { src: faviconUrl(n.url, 32), alt: '' });
+    img.addEventListener('error', () => {
+      img.replaceWith(el('span', { class: 'glyph', text: initial(n.title, n.url) }));
+    });
+    const li = el('li', {
+      class: 'omni-item', role: 'option', 'aria-selected': String(i === cursor),
+      onmouseenter: () => { cursor = i; syncSelection(); },
+      onclick: (e) => go(n.url, e),
+    }, [
+      img,
+      el('span', { class: 'omni-title', text: n.title || hostOf(n.url) }),
+      el('span', { class: 'omni-url', text: hostOf(n.url) }),
+    ]);
+    results.append(li);
+  });
+}
+
+function syncSelection() {
+  [...results.children].forEach((li, i) => li.setAttribute('aria-selected', String(i === cursor)));
+  results.children[cursor]?.scrollIntoView({ block: 'nearest' });
+}
+
+function hideResults() {
+  results.hidden = true;
+  clear(results);
+  hits = [];
+  cursor = -1;
+}
+
+function go(url, ev) {
+  const openIn = store.data.search.openIn;
+  if (openIn === 'new' || ev?.ctrlKey || ev?.metaKey) {
+    if (chrome.tabs?.create) chrome.tabs.create({ url });
+    else window.open(url, '_blank', 'noopener');
+  } else {
+    location.href = url;
+  }
+}
+
+omni.addEventListener('input', () => search(omni.value));
+omni.addEventListener('focus', () => { if (omni.value.trim()) search(omni.value); });
+omni.addEventListener('blur', () => setTimeout(hideResults, 140));
+omni.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); cursor = (cursor + 1) % hits.length; syncSelection(); }
+  else if (e.key === 'ArrowUp' && hits.length) { e.preventDefault(); cursor = (cursor - 1 + hits.length) % hits.length; syncSelection(); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const pick = hits[cursor];
+    if (pick) go(pick.url, e);
+    else if (omni.value.trim()) {
+      go(store.data.search.engine.replace('%s', encodeURIComponent(omni.value.trim())), e);
+    }
+  } else if (e.key === 'Escape') {
+    if (results.hidden) omni.blur();
+    else hideResults();
+  }
+});
+
+/* ============================================================
+   Cartouche : heure et compteur
+   ============================================================ */
+
+function startTitleBlock() {
+  const timeFmt = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const dateFmt = new Intl.DateTimeFormat('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+  const tick = () => {
+    const now = new Date();
+    $('tbTime').textContent = timeFmt.format(now);
+    $('tbDate').textContent = dateFmt.format(now).replace('.', '');
+  };
+  tick();
+  setInterval(tick, 20000);
+
+  countBookmarks()
+    .then((n) => { $('tbCount').textContent = `${n} favoris`; })
+    .catch(() => { $('tbCount').textContent = ''; });
+}
+
+/* ============================================================
+   Raccourcis clavier
+   ============================================================ */
+
+document.addEventListener('keydown', (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+  const modalOpen = !$('modalRoot').hidden;
+
+  if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    omni.focus();
+    omni.select();
+    return;
+  }
+  if (typing || modalOpen) return;
+
+  if (e.key === '/') { e.preventDefault(); omni.focus(); }
+  else if (e.key === 'e' || e.key === 'E') { setEditing(!editing); }
+  else if (e.key === 'Escape' && editing) { setEditing(false); }
+});
+
+/* ============================================================
+   Premier lancement
+   ============================================================ */
+
+async function seed() {
+  const tree = await chrome.bookmarks.getTree();
+  const roots = tree[0]?.children || [];
+  const bar = roots.find((n) => !n.url) || roots[0];
+
+  store.data.widgets = [
+    makeWidget('bookmarks', {
+      folderId: bar?.id ?? null,
+      folderPath: bar?.title || '',
+      view: 'tiles',
+    }, { w: 8, h: 3 }),
+    makeWidget('clock', { label: 'Horloge' }, { w: 4, h: 1 }),
+    makeWidget('topsites', {}, { w: 4, h: 2 }),
+  ];
+  await store.save();
+}
+
+/* ============================================================
+   Démarrage
+   ============================================================ */
+
+(async function boot() {
+  await store.load();
+  if (!store.data.widgets.length) {
+    try { await seed(); } catch { /* pas de favoris : feuille vide */ }
+  }
+
+  store.on(render);
+  render();
+  startTitleBlock();
+  requestAnimationFrame(() => document.body.classList.remove('booting'));
+
+  $('btnEdit').addEventListener('click', () => setEditing(!editing));
+  $('btnDone').addEventListener('click', () => setEditing(false));
+  $('btnSettings').addEventListener('click', openSettings);
+  $('btnAdd').addEventListener('click', openAddWidget);
+  $('emptyAdd').addEventListener('click', openAddWidget);
+
+  // Config modifiée dans un autre onglet : on se resynchronise.
+  chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area !== 'local') return;
+    if (store.selfWrites > 0) { store.selfWrites--; return; }
+    if (changes.config || changes.wallpaper) {
+      await store.load();
+      render();
+    }
+  });
+})().catch((err) => {
+  console.error('[Atelier] démarrage impossible', err);
+  toast('Démarrage impossible — voir la console');
+});
+
+})();
+</script>
+</body>
+</html>

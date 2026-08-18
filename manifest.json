@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Atelier — Tableau de bord",
+  "version": "0.1.0",
+  "description": "Remplace le nouvel onglet par un tableau de bord modulable construit sur tes favoris.",
+  "permissions": ["bookmarks", "storage", "favicon", "topSites"],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}

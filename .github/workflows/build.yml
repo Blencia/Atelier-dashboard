@@ -1,0 +1,87 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      - name: Manifeste et syntaxe JS
+        run: |
+          python3 -c "import json;json.load(open('manifest.json'))"
+          mkdir -p /tmp/chk
+          for f in $(find js -name '*.js'); do
+            cp "$f" "/tmp/chk/$(basename $f .js).mjs"
+            node --check "/tmp/chk/$(basename $f .js).mjs"
+          done
+
+      - name: L'aperçu est-il à jour ?
+        run: |
+          python3 scripts/build-preview.py
+          git diff --exit-code docs/apercu.html \
+            || (echo "::error::docs/apercu.html est périmé — relance scripts/build-preview.py et commit" && exit 1)
+
+      - name: Empaquetage
+        run: bash scripts/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: dist/*.zip
+
+  release:
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/build.sh
+
+      - name: Publier la release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+
+      # Envoi automatique au Chrome Web Store.
+      # Ne se déclenche que si les 4 secrets sont configurés dans le dépôt.
+      # Guide pour les obtenir : https://developer.chrome.com/docs/webstore/using-api
+      - name: Envoyer au Chrome Web Store
+        if: ${{ secrets.CWS_EXTENSION_ID != '' }}
+        env:
+          EXT_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=$CLIENT_ID" \
+            -d "client_secret=$CLIENT_SECRET" \
+            -d "refresh_token=$REFRESH_TOKEN" \
+            -d "grant_type=refresh_token" | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+          ZIP=$(ls dist/*.zip)
+          echo "→ Téléversement de $ZIP"
+          curl -s -f -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -T "$ZIP" \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$EXT_ID"
+
+          echo "→ Soumission en révision"
+          curl -s -f -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/$EXT_ID/publish"

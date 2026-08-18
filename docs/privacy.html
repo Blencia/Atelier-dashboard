@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Politique de confidentialité — Atelier</title>
+<style>
+  :root {
+    --ink: #14161a; --panel: #1a1d23; --rule: #2b313a;
+    --text: #e6e8ec; --dim: #9aa3af; --accent: #e3a008;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 56px 24px 96px;
+    background: var(--ink); color: var(--text);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+  }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; font-weight: 600; }
+  .updated { font-family: var(--mono); font-size: 12px; color: var(--dim); margin: 0 0 40px; }
+  h2 {
+    font-size: 13px; font-family: var(--mono); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim); font-weight: 500;
+    border-top: 1px solid var(--rule); padding-top: 22px; margin: 40px 0 14px;
+  }
+  p, li { color: #d3d7de; }
+  .lead { font-size: 18px; }
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 1px 5px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--dim); font-weight: 500;
+  }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+  }
+  @media (max-width: 620px) {
+    body { padding: 36px 18px 64px; }
+    table { font-size: 13.5px; }
+    th, td { padding: 8px 8px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Atelier</p>
+  <h1>Politique de confidentialité</h1>
+  <p class="updated">Dernière mise à jour : 17 août 2026</p>
+
+  <p class="lead">Atelier ne collecte rien, n'envoie rien, ne partage rien.
+  Aucun serveur, aucun compte, aucun analytique, aucune publicité.</p>
+
+  <h2>Données auxquelles l'extension accède</h2>
+  <table>
+    <thead>
+      <tr><th>Donnée</th><th>Pourquoi</th><th>Où elle va</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Vos favoris Chrome</td>
+        <td>Afficher les dossiers que vous choisissez dans les modules et alimenter la recherche</td>
+        <td>Reste dans le navigateur, lue en direct</td>
+      </tr>
+      <tr>
+        <td>Vos sites fréquents</td>
+        <td>Alimenter le module « Sites fréquents »</td>
+        <td>Reste dans le navigateur, lu en direct</td>
+      </tr>
+      <tr>
+        <td>Votre mise en page et vos réglages</td>
+        <td>Retrouver votre tableau de bord à chaque nouvel onglet</td>
+        <td><code>chrome.storage.local</code>, sur votre appareil seulement</td>
+      </tr>
+      <tr>
+        <td>Le texte du bloc-notes</td>
+        <td>Le conserver entre les sessions</td>
+        <td><code>chrome.storage.local</code>, sur votre appareil seulement</td>
+      </tr>
+      <tr>
+        <td>Votre fond d'écran</td>
+        <td>L'afficher</td>
+        <td><code>chrome.storage.local</code>, sur votre appareil seulement</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Aucune de ces données ne quitte votre ordinateur. L'extension n'effectue
+  aucune requête réseau. Les icônes de site sont servies localement par Chrome.</p>
+
+  <h2>Permissions demandées</h2>
+  <ul>
+    <li><strong><code>bookmarks</code></strong> — lecture seule de l'arbre des
+    favoris, pour afficher les dossiers dans les modules et alimenter la
+    recherche. L'extension ne crée, ne modifie et ne supprime aucun favori.</li>
+    <li><strong><code>storage</code></strong> — enregistrer votre mise en page
+    et vos réglages localement.</li>
+    <li><strong><code>favicon</code></strong> — afficher l'icône de chaque site
+    à côté du lien correspondant.</li>
+    <li><strong><code>topSites</code></strong> — lire la liste des sites
+    fréquents de Chrome pour le module du même nom.</li>
+    <li><strong>Remplacement du nouvel onglet</strong> — c'est la fonction même
+    de l'extension.</li>
+  </ul>
+
+  <h2>Suppression</h2>
+  <p>Désinstaller l'extension efface tout ce qu'elle a stocké. Vous pouvez
+  aussi utiliser Réglages → Données → <strong>Tout réinitialiser</strong> à
+  n'importe quel moment. Vos favoris Chrome ne sont jamais modifiés ni
+  supprimés par l'extension.</p>
+
+  <h2>Modifications</h2>
+  <p>Toute modification à cette politique sera publiée sur cette page, avec la
+  date de mise à jour ci-dessus. L'historique complet est consultable dans le
+  dépôt du code source.</p>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:contact@trystandanylo.com">contact@trystandanylo.com</a></p>
+
+  <footer>
+    <a href="./">Accueil</a> ·
+    <a href="apercu.html">Aperçu</a> ·
+    <a href="https://github.com/Blencia/atelier">Code source</a>
+  </footer>
+</main>
+</body>
+</html>

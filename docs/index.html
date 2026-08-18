@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier — tableau de bord de favoris pour Chrome</title>
+<meta name="description" content="Transforme le nouvel onglet de Chrome en tableau de bord modulable bâti sur tes dossiers de favoris. Local, sans compte, sans pub.">
+<style>
+  :root {
+    --ink: #14161a; --panel: #1a1d23; --rule: #2b313a;
+    --text: #e6e8ec; --dim: #9aa3af; --accent: #e3a008;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 24px 96px;
+    background: var(--ink); color: var(--text);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(to right, #23282f 1px, transparent 1px),
+      linear-gradient(to bottom, #23282f 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+  header { padding: 84px 0 0; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 12px;
+  }
+  h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.1; margin: 0 0 16px; font-weight: 600; letter-spacing: -.02em; }
+  .lead { font-size: 19px; color: #d3d7de; margin: 0 0 32px; max-width: 58ch; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 72px; }
+  .btn {
+    display: inline-block; text-decoration: none;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; padding: 12px 18px;
+    border: 1px solid var(--rule); border-radius: 5px; color: var(--dim);
+    transition: all 130ms cubic-bezier(.2,.7,.3,1);
+  }
+  .btn:hover { color: var(--text); border-color: var(--dim); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+  .btn-primary:hover { color: var(--ink); filter: brightness(1.08); }
+  h2 {
+    font-size: 13px; font-family: var(--mono); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim); font-weight: 500;
+    border-top: 1px solid var(--rule); padding-top: 22px; margin: 48px 0 16px;
+  }
+  ul { padding-left: 20px; margin: 0; }
+  li { margin-bottom: 10px; color: #d3d7de; }
+  a { color: var(--accent); }
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 1px 5px;
+  }
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+  }
+  @media (max-width: 620px) { header { padding-top: 52px; } body { padding-inline: 18px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Extension Chrome</p>
+    <h1>Atelier</h1>
+    <p class="lead">Le nouvel onglet devient une feuille de travail que tu
+    construis toi-même. Chaque dossier de favoris devient un module qu'on
+    déplace et redimensionne.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="apercu.html">Essayer l'aperçu</a>
+      <a class="btn" href="https://github.com/Blencia/atelier">Code source</a>
+      <a class="btn" href="privacy.html">Confidentialité</a>
+    </div>
+  </header>
+
+  <h2>Ce que ça fait</h2>
+  <ul>
+    <li>Chaque dossier de favoris devient un module — tuiles, liste ou liste dense</li>
+    <li>Navigation dans les sous-dossiers sans quitter le tableau de bord</li>
+    <li>Recherche instantanée dans tous les favoris avec la touche <code>/</code>, avec repli sur le moteur de ton choix</li>
+    <li>Modules additionnels : horloge, bloc-notes, sites fréquents</li>
+    <li>Mode plan : glisse pour réordonner, tire un coin pour redimensionner</li>
+  </ul>
+
+  <h2>Personnalisable</h2>
+  <ul>
+    <li>Thème encre ou papier, couleur d'accent au choix</li>
+    <li>Colonnes, espacement, hauteur des rangées, arrondi des coins</li>
+    <li>Fond d'écran, densité, taille des icônes</li>
+    <li>Export et import de la mise en page en JSON</li>
+  </ul>
+
+  <h2>Confidentialité</h2>
+  <ul>
+    <li>Aucun compte, aucune inscription</li>
+    <li>Aucune requête réseau, aucun analytique, aucune publicité</li>
+    <li>Tout reste dans ton navigateur</li>
+    <li>Tes favoris sont lus, jamais modifiés</li>
+  </ul>
+
+  <footer>
+    MIT · <a href="https://github.com/Blencia/atelier">GitHub</a>
+  </footer>
+</main>
+</body>
+</html>
