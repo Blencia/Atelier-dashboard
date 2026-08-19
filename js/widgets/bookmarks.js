@@ -1,6 +1,13 @@
 import { defineWidget } from '../registry.js';
 import { store } from '../store.js';
-import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal, toast } from '../ui.js';
+import {
+  el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath,
+  openModal, toast, isEditing, openContextMenu,
+} from '../ui.js';
+
+/* Format perso du dataTransfer : évite de capter un drag venant d'ailleurs
+   (ex. un lien glissé depuis un autre onglet du navigateur). */
+const DND_TYPE = 'application/x-atelier-bookmark-id';
 
 defineWidget({
   type: 'bookmarks',
@@ -46,6 +53,10 @@ defineWidget({
     const s = ctx.settings;
     let stack = [];          // navigation interne, non persistée
     let alive = true;
+    // Reste interactif en mode plan (pointer-events) — voir la règle CSS
+    // `body.is-editing .widget-body.bm-dnd` — pour permettre le glisser de favoris
+    // vers un autre module pendant qu'on réorganise la feuille.
+    body.classList.add('bm-dnd');
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -134,7 +145,35 @@ defineWidget({
       for (const node of items) {
         wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
       }
+      wireDrop(wrap, currentId);
       body.append(wrap);
+    }
+
+    /** Dépose ici un favori glissé depuis ce module ou un autre : le déplace
+        (chrome.bookmarks.move) dans le dossier actuellement affiché. */
+    function wireDrop(wrap, targetFolderId) {
+      wrap.addEventListener('dragover', (e) => {
+        if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        wrap.classList.add('bm-drop-target');
+      });
+      wrap.addEventListener('dragleave', (e) => {
+        if (e.target === wrap) wrap.classList.remove('bm-drop-target');
+      });
+      wrap.addEventListener('drop', async (e) => {
+        wrap.classList.remove('bm-drop-target');
+        if (!isEditing()) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId) return;
+        e.preventDefault();
+        try {
+          await chrome.bookmarks.move(bmId, { parentId: targetFolderId });
+          toast('Favori déplacé');
+        } catch {
+          toast('Déplacement impossible — dossier invalide ?');
+        }
+      });
     }
 
     function iconFor(node, size) {
@@ -173,6 +212,44 @@ defineWidget({
       const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
     }
 
+    /** Fiche détaillée : titre réel, lien complet, date d'ajout, copier le lien. */
+    function showDetails(node) {
+      const alias = store.data.aliases[node.id];
+      const rows = [
+        ['Titre', node.title || '(sans titre)'],
+        alias ? ['Nom affiché (local)', alias] : null,
+        ['Lien', node.url],
+        [
+          'Ajouté le',
+          node.dateAdded
+            ? new Intl.DateTimeFormat('fr-CA', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(node.dateAdded))
+            : '—',
+        ],
+      ].filter(Boolean);
+
+      const body2 = el('div', { class: 'bm-details' });
+      for (const [label, value] of rows) {
+        body2.append(el('div', { class: 'bm-details-row' }, [
+          el('span', { class: 'bm-details-label', text: label }),
+          el('span', { class: 'bm-details-value', text: value }),
+        ]));
+      }
+
+      const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+        el('button', {
+          class: 'btn', type: 'button', text: 'Copier le lien',
+          onclick: async () => {
+            try { await navigator.clipboard.writeText(node.url); toast('Lien copié'); }
+            catch { toast('Copie impossible'); }
+          },
+        }),
+        el('span', { style: { flex: '1' } }),
+        el('a', { class: 'btn btn-primary', href: node.url, target: '_blank', rel: 'noopener', text: 'Ouvrir le lien' }),
+      ]);
+
+      openModal({ title: 'Détails du favori', body: body2, footer });
+    }
+
     function linkNode(node, tiles, badges) {
       // textContent partout : un titre de favori peut contenir du HTML.
       const alias = store.data.aliases[node.id];
@@ -181,8 +258,26 @@ defineWidget({
         class: badges ? 'badge' : tiles ? 'tile' : 'row',
         href: node.url,
         title: `${label}\n${node.url}`,
-        onclick: (e) => openLink(node.url, s.openIn, e),
-        onauxclick: (e) => openLink(node.url, s.openIn, e),
+        draggable: 'true', // el() ne stringifie que `true` littéral en "" — 'draggable' exige la chaîne "true"
+        onclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
+        onauxclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
+        oncontextmenu: (e) => {
+          e.preventDefault();
+          openContextMenu(e.clientX, e.clientY, [
+            { label: 'Renommer le favori', onClick: () => renameNode(node) },
+            { label: 'Voir les détails', onClick: () => showDetails(node) },
+          ]);
+        },
+        ondragstart: (e) => {
+          if (!isEditing()) return e.preventDefault();
+          // stopPropagation : sans ça, ce dragstart remonte jusqu'à l'article
+          // .widget et déclenche AUSSI le déplacement du module entier (app.js).
+          e.stopPropagation();
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData(DND_TYPE, node.id);
+          a.classList.add('dragging-bm');
+        },
+        ondragend: (e) => { e.stopPropagation(); a.classList.remove('dragging-bm'); },
       });
       a.append(iconFor(node, tiles || badges));
       if (!badges) {
@@ -202,7 +297,16 @@ defineWidget({
         type: 'button',
         title: node.title,
         style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
-        onclick: () => { stack.push(node); render(); },
+        draggable: 'true',
+        onclick: (e) => { if (isEditing()) return; stack.push(node); render(); },
+        ondragstart: (e) => {
+          if (!isEditing()) return e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData(DND_TYPE, node.id);
+          b.classList.add('dragging-bm');
+        },
+        ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
       });
       b.append(el('span', { class: 'glyph', text: '▸' }));
       if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));

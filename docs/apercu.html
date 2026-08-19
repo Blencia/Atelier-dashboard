@@ -705,6 +705,59 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
   letter-spacing: .06em; color: var(--graphite-3);
 }
 
+/* ---------- Glisser des favoris entre modules, en mode plan ---------- */
+
+/* Spécificité plus élevée que `body.is-editing .widget-body` : le module
+   Dossier de favoris reste interactif pendant le mode plan pour permettre
+   le glisser d'un favori vers un autre module. */
+body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
+
+.dragging-bm { opacity: .35; }
+.bm-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* ---------- Menu contextuel ---------- */
+
+.ctx-menu {
+  position: fixed; z-index: 300;
+  min-width: 180px;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / .4);
+}
+.ctx-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0; border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--graphite);
+  font: inherit; font-size: 13px;
+  cursor: pointer;
+}
+.ctx-item:hover { background: var(--panel); color: var(--accent); }
+.ctx-sep { height: 1px; margin: 4px 2px; background: var(--rule-soft); }
+
+/* ---------- Fiche détails d'un favori ---------- */
+
+.bm-details-row {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.bm-details-row:last-child { border-bottom: 0; }
+.bm-details-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--graphite-3);
+}
+.bm-details-value {
+  font-size: 13px; color: var(--graphite);
+  word-break: break-all;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }
@@ -795,6 +848,7 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
 
   const B = {};
   let nextId = 100;
+  const movedListeners = new Set();
 
   function folder(title, parentId, children) {
     const id = String(nextId++);
@@ -930,7 +984,20 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
         const q = String(query).toLowerCase();
         return Object.values(B).filter((b) => b.url && (b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q)));
       },
-      onCreated: noop(), onRemoved: noop(), onChanged: noop(), onMoved: noop(),
+      async move(id, { parentId, index }) {
+        const node = B[id];
+        const newParent = B[parentId];
+        if (!node || !newParent) throw new Error('déplacement invalide');
+        const oldParent = B[node.parentId];
+        if (oldParent) oldParent.children = oldParent.children.filter((c) => c !== id);
+        node.parentId = parentId;
+        if (typeof index === 'number') newParent.children.splice(index, 0, id);
+        else newParent.children.push(id);
+        movedListeners.forEach((fn) => fn(id, { parentId }));
+        return [{ ...node }];
+      },
+      onCreated: noop(), onRemoved: noop(), onChanged: noop(),
+      onMoved: { addListener: (fn) => movedListeners.add(fn), removeListener: (fn) => movedListeners.delete(fn) },
     },
     topSites: {
       async get() {
@@ -1408,6 +1475,53 @@ function debounce(fn, ms) {
   };
 }
 
+/** Vrai pendant le mode plan. Les widgets s'en servent pour désarmer la
+    navigation normale (clic sur un lien) sans désactiver le glisser. */
+function isEditing() {
+  return document.body.classList.contains('is-editing');
+}
+
+/* ---------- Menu contextuel ---------- */
+
+let closeCtxMenu = null;
+
+/** items : [{label, onClick}] ou '-' pour un séparateur. */
+function openContextMenu(x, y, items) {
+  closeCtxMenu?.();
+
+  const menu = el('div', { class: 'ctx-menu', style: { left: `${x}px`, top: `${y}px` } });
+  for (const item of items) {
+    if (item === '-') { menu.append(el('div', { class: 'ctx-sep' })); continue; }
+    menu.append(el('button', {
+      class: 'ctx-item', type: 'button', text: item.label,
+      onclick: () => { close(); item.onClick(); },
+    }));
+  }
+  document.body.append(menu);
+
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    if (r.right > window.innerWidth) menu.style.left = `${Math.max(4, window.innerWidth - r.width - 8)}px`;
+    if (r.bottom > window.innerHeight) menu.style.top = `${Math.max(4, window.innerHeight - r.height - 8)}px`;
+  });
+
+  const onDocDown = (e) => { if (!menu.contains(e.target)) close(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  function close() {
+    menu.remove();
+    document.removeEventListener('mousedown', onDocDown, true);
+    document.removeEventListener('keydown', onKey);
+    if (closeCtxMenu === close) closeCtxMenu = null;
+  }
+  closeCtxMenu = close;
+  // Différé : évite que le mousedown du clic droit qui ouvre le menu le referme aussitôt.
+  setTimeout(() => {
+    document.addEventListener('mousedown', onDocDown, true);
+    document.addEventListener('keydown', onKey);
+  }, 0);
+  return close;
+}
+
 /* ==== js/settings.js ==== */
 const ACCENTS = ['#e3a008', '#5eead4', '#f97362', '#8b9dff', '#b5cc4a', '#e879bd', '#9aa3af'];
 const ENGINES = [
@@ -1854,6 +1968,15 @@ function downscale(file, maxW, quality) {
 }
 
 /* ==== js/widgets/bookmarks.js ==== */
+import {
+  el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath,
+  openModal, toast, isEditing, openContextMenu,
+} from '../ui.js';
+
+/* Format perso du dataTransfer : évite de capter un drag venant d'ailleurs
+   (ex. un lien glissé depuis un autre onglet du navigateur). */
+const DND_TYPE = 'application/x-atelier-bookmark-id';
+
 defineWidget({
   type: 'bookmarks',
   name: 'Dossier de favoris',
@@ -1898,6 +2021,10 @@ defineWidget({
     const s = ctx.settings;
     let stack = [];          // navigation interne, non persistée
     let alive = true;
+    // Reste interactif en mode plan (pointer-events) — voir la règle CSS
+    // `body.is-editing .widget-body.bm-dnd` — pour permettre le glisser de favoris
+    // vers un autre module pendant qu'on réorganise la feuille.
+    body.classList.add('bm-dnd');
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -1986,7 +2113,35 @@ defineWidget({
       for (const node of items) {
         wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
       }
+      wireDrop(wrap, currentId);
       body.append(wrap);
+    }
+
+    /** Dépose ici un favori glissé depuis ce module ou un autre : le déplace
+        (chrome.bookmarks.move) dans le dossier actuellement affiché. */
+    function wireDrop(wrap, targetFolderId) {
+      wrap.addEventListener('dragover', (e) => {
+        if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        wrap.classList.add('bm-drop-target');
+      });
+      wrap.addEventListener('dragleave', (e) => {
+        if (e.target === wrap) wrap.classList.remove('bm-drop-target');
+      });
+      wrap.addEventListener('drop', async (e) => {
+        wrap.classList.remove('bm-drop-target');
+        if (!isEditing()) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId) return;
+        e.preventDefault();
+        try {
+          await chrome.bookmarks.move(bmId, { parentId: targetFolderId });
+          toast('Favori déplacé');
+        } catch {
+          toast('Déplacement impossible — dossier invalide ?');
+        }
+      });
     }
 
     function iconFor(node, size) {
@@ -2025,6 +2180,44 @@ defineWidget({
       const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
     }
 
+    /** Fiche détaillée : titre réel, lien complet, date d'ajout, copier le lien. */
+    function showDetails(node) {
+      const alias = store.data.aliases[node.id];
+      const rows = [
+        ['Titre', node.title || '(sans titre)'],
+        alias ? ['Nom affiché (local)', alias] : null,
+        ['Lien', node.url],
+        [
+          'Ajouté le',
+          node.dateAdded
+            ? new Intl.DateTimeFormat('fr-CA', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(node.dateAdded))
+            : '—',
+        ],
+      ].filter(Boolean);
+
+      const body2 = el('div', { class: 'bm-details' });
+      for (const [label, value] of rows) {
+        body2.append(el('div', { class: 'bm-details-row' }, [
+          el('span', { class: 'bm-details-label', text: label }),
+          el('span', { class: 'bm-details-value', text: value }),
+        ]));
+      }
+
+      const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+        el('button', {
+          class: 'btn', type: 'button', text: 'Copier le lien',
+          onclick: async () => {
+            try { await navigator.clipboard.writeText(node.url); toast('Lien copié'); }
+            catch { toast('Copie impossible'); }
+          },
+        }),
+        el('span', { style: { flex: '1' } }),
+        el('a', { class: 'btn btn-primary', href: node.url, target: '_blank', rel: 'noopener', text: 'Ouvrir le lien' }),
+      ]);
+
+      openModal({ title: 'Détails du favori', body: body2, footer });
+    }
+
     function linkNode(node, tiles, badges) {
       // textContent partout : un titre de favori peut contenir du HTML.
       const alias = store.data.aliases[node.id];
@@ -2033,8 +2226,26 @@ defineWidget({
         class: badges ? 'badge' : tiles ? 'tile' : 'row',
         href: node.url,
         title: `${label}\n${node.url}`,
-        onclick: (e) => openLink(node.url, s.openIn, e),
-        onauxclick: (e) => openLink(node.url, s.openIn, e),
+        draggable: 'true', // el() ne stringifie que `true` littéral en "" — 'draggable' exige la chaîne "true"
+        onclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
+        onauxclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
+        oncontextmenu: (e) => {
+          e.preventDefault();
+          openContextMenu(e.clientX, e.clientY, [
+            { label: 'Renommer le favori', onClick: () => renameNode(node) },
+            { label: 'Voir les détails', onClick: () => showDetails(node) },
+          ]);
+        },
+        ondragstart: (e) => {
+          if (!isEditing()) return e.preventDefault();
+          // stopPropagation : sans ça, ce dragstart remonte jusqu'à l'article
+          // .widget et déclenche AUSSI le déplacement du module entier (app.js).
+          e.stopPropagation();
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData(DND_TYPE, node.id);
+          a.classList.add('dragging-bm');
+        },
+        ondragend: (e) => { e.stopPropagation(); a.classList.remove('dragging-bm'); },
       });
       a.append(iconFor(node, tiles || badges));
       if (!badges) {
@@ -2054,7 +2265,16 @@ defineWidget({
         type: 'button',
         title: node.title,
         style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
-        onclick: () => { stack.push(node); render(); },
+        draggable: 'true',
+        onclick: (e) => { if (isEditing()) return; stack.push(node); render(); },
+        ondragstart: (e) => {
+          if (!isEditing()) return e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData(DND_TYPE, node.id);
+          b.classList.add('dragging-bm');
+        },
+        ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
       });
       b.append(el('span', { class: 'glyph', text: '▸' }));
       if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));

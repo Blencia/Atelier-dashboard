@@ -6,6 +6,14 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Ajouté
+- Mode plan : glisser un favori (ou un dossier) d'un module Dossier de
+  favoris vers un autre pour le déplacer réellement entre dossiers
+  (`chrome.bookmarks.move`) — les modules restent interactifs pendant le
+  mode plan pour permettre ce glisser
+- Clic droit sur un favori : menu contextuel « Renommer le favori » /
+  « Voir les détails » (titre, lien complet, date d'ajout, copier le lien)
+
 ## [1.0.0] — 2026-08-19
 
 ### Ajouté

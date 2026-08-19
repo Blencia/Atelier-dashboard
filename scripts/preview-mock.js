@@ -8,6 +8,7 @@
 
   const B = {};
   let nextId = 100;
+  const movedListeners = new Set();
 
   function folder(title, parentId, children) {
     const id = String(nextId++);
@@ -143,7 +144,20 @@
         const q = String(query).toLowerCase();
         return Object.values(B).filter((b) => b.url && (b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q)));
       },
-      onCreated: noop(), onRemoved: noop(), onChanged: noop(), onMoved: noop(),
+      async move(id, { parentId, index }) {
+        const node = B[id];
+        const newParent = B[parentId];
+        if (!node || !newParent) throw new Error('déplacement invalide');
+        const oldParent = B[node.parentId];
+        if (oldParent) oldParent.children = oldParent.children.filter((c) => c !== id);
+        node.parentId = parentId;
+        if (typeof index === 'number') newParent.children.splice(index, 0, id);
+        else newParent.children.push(id);
+        movedListeners.forEach((fn) => fn(id, { parentId }));
+        return [{ ...node }];
+      },
+      onCreated: noop(), onRemoved: noop(), onChanged: noop(),
+      onMoved: { addListener: (fn) => movedListeners.add(fn), removeListener: (fn) => movedListeners.delete(fn) },
     },
     topSites: {
       async get() {

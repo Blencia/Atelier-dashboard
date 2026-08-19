@@ -698,6 +698,59 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
   letter-spacing: .06em; color: var(--graphite-3);
 }
 
+/* ---------- Glisser des favoris entre modules, en mode plan ---------- */
+
+/* Spécificité plus élevée que `body.is-editing .widget-body` : le module
+   Dossier de favoris reste interactif pendant le mode plan pour permettre
+   le glisser d'un favori vers un autre module. */
+body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
+
+.dragging-bm { opacity: .35; }
+.bm-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* ---------- Menu contextuel ---------- */
+
+.ctx-menu {
+  position: fixed; z-index: 300;
+  min-width: 180px;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / .4);
+}
+.ctx-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0; border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--graphite);
+  font: inherit; font-size: 13px;
+  cursor: pointer;
+}
+.ctx-item:hover { background: var(--panel); color: var(--accent); }
+.ctx-sep { height: 1px; margin: 4px 2px; background: var(--rule-soft); }
+
+/* ---------- Fiche détails d'un favori ---------- */
+
+.bm-details-row {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.bm-details-row:last-child { border-bottom: 0; }
+.bm-details-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--graphite-3);
+}
+.bm-details-value {
+  font-size: 13px; color: var(--graphite);
+  word-break: break-all;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }

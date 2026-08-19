@@ -150,3 +150,50 @@ export function debounce(fn, ms) {
     t = setTimeout(() => fn(...a), ms);
   };
 }
+
+/** Vrai pendant le mode plan. Les widgets s'en servent pour désarmer la
+    navigation normale (clic sur un lien) sans désactiver le glisser. */
+export function isEditing() {
+  return document.body.classList.contains('is-editing');
+}
+
+/* ---------- Menu contextuel ---------- */
+
+let closeCtxMenu = null;
+
+/** items : [{label, onClick}] ou '-' pour un séparateur. */
+export function openContextMenu(x, y, items) {
+  closeCtxMenu?.();
+
+  const menu = el('div', { class: 'ctx-menu', style: { left: `${x}px`, top: `${y}px` } });
+  for (const item of items) {
+    if (item === '-') { menu.append(el('div', { class: 'ctx-sep' })); continue; }
+    menu.append(el('button', {
+      class: 'ctx-item', type: 'button', text: item.label,
+      onclick: () => { close(); item.onClick(); },
+    }));
+  }
+  document.body.append(menu);
+
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    if (r.right > window.innerWidth) menu.style.left = `${Math.max(4, window.innerWidth - r.width - 8)}px`;
+    if (r.bottom > window.innerHeight) menu.style.top = `${Math.max(4, window.innerHeight - r.height - 8)}px`;
+  });
+
+  const onDocDown = (e) => { if (!menu.contains(e.target)) close(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  function close() {
+    menu.remove();
+    document.removeEventListener('mousedown', onDocDown, true);
+    document.removeEventListener('keydown', onKey);
+    if (closeCtxMenu === close) closeCtxMenu = null;
+  }
+  closeCtxMenu = close;
+  // Différé : évite que le mousedown du clic droit qui ouvre le menu le referme aussitôt.
+  setTimeout(() => {
+    document.addEventListener('mousedown', onDocDown, true);
+    document.addEventListener('keydown', onKey);
+  }, 0);
+  return close;
+}
