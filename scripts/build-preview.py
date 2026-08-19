@@ -13,7 +13,9 @@ def flatten(rel):
 
 ORDER = [
     'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js',
-    'js/widgets/bookmarks.js', 'js/widgets/misc.js', 'js/app.js',
+    'js/widgets/bookmarks.js', 'js/widgets/misc.js',
+    'js/widgets/googletools.js', 'js/widgets/folder.js', 'js/widgets/weather.js',
+    'js/app.js',
 ]
 
 app = "".join(flatten(p) for p in ORDER)

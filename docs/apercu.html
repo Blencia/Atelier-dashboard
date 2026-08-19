@@ -570,6 +570,141 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
   font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em;
 }
 
+/* ---------- Onglets (dashboards) ---------- */
+
+.boards {
+  display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap;
+  max-width: var(--maxw);
+  margin: 12px auto 0;
+  padding: 0 2px;
+}
+.board-tab {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: .06em;
+  color: var(--graphite-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.board-tab:hover { color: var(--graphite); }
+.board-tab.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border-color: var(--rule);
+  border-bottom-color: transparent;
+}
+.board-tab-gear {
+  background: none; border: 0; padding: 0; margin: 0;
+  color: inherit; font-size: 10px; cursor: pointer; opacity: .7; line-height: 1;
+}
+.board-tab-gear:hover { opacity: 1; }
+.board-tab-add { font-size: 14px; padding: 7px 10px; }
+.board-tab-add:hover { color: var(--accent); }
+
+/* ---------- Saut clavier Alt+1..9 ---------- */
+
+@keyframes flash-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  35% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+.widget.flash { animation: flash-pulse 900ms var(--ease); border-color: var(--accent); }
+
+/* ---------- Contenu : pastilles + renommage local ---------- */
+
+.bm-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge {
+  display: grid; place-items: center;
+  width: calc(var(--icon, 26px) + 14px); height: calc(var(--icon, 26px) + 14px);
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  text-decoration: none; color: var(--graphite);
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.badge:hover, .badge:focus-visible { border-color: var(--accent); transform: translateY(-1px); }
+.badge img, .badge .glyph { width: var(--icon, 26px); height: var(--icon, 26px); border-radius: 50%; }
+.badge .glyph { display: grid; place-items: center; background: transparent; border: 0; }
+
+.tile { position: relative; }
+.bm-rename {
+  background: var(--panel-2); border: 1px solid var(--rule);
+  border-radius: 50%; width: 18px; height: 18px; padding: 0;
+  display: grid; place-items: center; flex: none;
+  color: var(--graphite-3); font-size: 9px; cursor: pointer;
+  opacity: 0; transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.bm-rename:hover { color: var(--accent); border-color: var(--accent); }
+.tile .bm-rename { position: absolute; top: 2px; right: 2px; }
+.tile:hover .bm-rename, .tile:focus-within .bm-rename { opacity: 1; }
+.row:hover .bm-rename, .row:focus-within .bm-rename { opacity: 1; }
+
+/* ---------- Contenu : horloge, second fuseau ---------- */
+
+.clock-tz2 {
+  margin-top: 4px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--graphite-3);
+}
+
+/* ---------- Contenu : compte à rebours ---------- */
+
+.countdown { display: grid; place-content: center; height: 100%; text-align: center; gap: 4px; }
+.countdown-big {
+  font-family: var(--font-mono);
+  font-size: clamp(20px, 3.4vw, 34px);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.countdown-sub {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--graphite-3);
+}
+
+/* ---------- Contenu : dossier façon iPhone ---------- */
+
+.folder-open {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: none; border: 0; cursor: pointer; color: var(--graphite); font: inherit;
+}
+.folder-preview {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
+  width: 44px; height: 44px;
+  padding: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+}
+.folder-preview img, .folder-preview .glyph { width: 100%; height: 100%; border-radius: 3px; }
+.folder-slot-empty { border-radius: 3px; background: color-mix(in srgb, var(--rule) 40%, transparent); }
+.folder-name {
+  font-size: 11px; color: var(--graphite-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+}
+.folder-grid .tile { padding: 10px 4px; }
+
+/* ---------- Contenu : météo ---------- */
+
+.weather { display: grid; place-content: center; height: 100%; text-align: center; gap: 2px; }
+.weather-icon { font-size: clamp(22px, 3.6vw, 34px); line-height: 1; }
+.weather-temp {
+  font-family: var(--font-mono); font-size: clamp(18px, 2.6vw, 26px);
+  font-variant-numeric: tabular-nums;
+}
+.weather-place {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .06em; color: var(--graphite-3);
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }
@@ -623,6 +758,9 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
       </button>
     </div>
   </header>
+
+  <!-- Onglets : plusieurs feuilles indépendantes (principal, streaming, etc.) -->
+  <nav class="boards" id="boards" aria-label="Dashboards"></nav>
 
   <!-- Règle de colonnes, visible seulement en mode plan -->
   <div class="ruler" id="ruler" aria-hidden="true"></div>
@@ -731,18 +869,35 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
   const ids = Object.values(B);
   const byTitle = (t) => ids.find((n) => n.title === t && !n.url)?.id ?? null;
   const preset = {
-    version: 1,
+    version: 2,
     theme: { mode: 'dark', accent: '#e3a008', density: 'comfy', radius: 6, showGrid: false, showLabels: true, wallpaperDim: 55 },
     layout: { cols: 12, gap: 14, row: 132, maxWidth: 1440 },
     search: { engine: 'https://www.google.com/search?q=%s', openIn: 'current' },
-    widgets: [
-      { id: 'w1', type: 'bookmarks', w: 5, h: 3, settings: { folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev', view: 'tiles', tile: 78, icon: 26, sort: 'manual', limit: 0, openIn: 'current', showCrumbs: true } },
-      { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
-      { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false } },
-      { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
-      { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'tiles', tile: 68, icon: 24, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
-      { id: 'w6', type: 'bookmarks', w: 3, h: 2, settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'compact', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
-      { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
+    aliases: {},
+    activeBoard: 'b1',
+    boards: [
+      {
+        id: 'b1', name: 'Principal', theme: null,
+        widgets: [
+          { id: 'w1', type: 'bookmarks', w: 5, h: 3, settings: { folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev', view: 'tiles', tile: 78, icon: 26, sort: 'manual', limit: 0, openIn: 'current', showCrumbs: true } },
+          { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false, tz2: 'Europe/Paris', tz2Label: 'Paris' } },
+          { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
+          { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w6', type: 'bookmarks', w: 3, h: 2, settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'compact', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
+          { id: 'w8', type: 'folder', w: 2, h: 1, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients' } },
+          { id: 'w9', type: 'countdown', w: 3, h: 1, settings: { label: 'Réveillon', target: '2026-12-24T18:00', doneText: 'Joyeux Noël !' } },
+        ],
+      },
+      {
+        id: 'b2', name: 'Streaming', theme: { mode: 'dark', accent: '#8b9dff' },
+        widgets: [
+          { id: 'w10', type: 'googletools', w: 4, h: 2, settings: { view: 'tiles', tile: 76, icon: 26, openIn: 'new' } },
+          { id: 'w11', type: 'weather', w: 3, h: 1, settings: { city: 'Montréal, QC', label: '' } },
+          { id: 'w12', type: 'clock', w: 3, h: 1, settings: { label: 'Horloge', date: true, seconds: false, hour12: false } },
+        ],
+      },
     ],
   };
 
@@ -813,7 +968,15 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
 
 const KEY = 'config';
 const WALL = 'wallpaper';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+
+function uid(prefix = 'w') {
+  return prefix + Math.random().toString(36).slice(2, 9);
+}
+
+function defaultBoard() {
+  return { id: uid('b'), name: 'Principal', widgets: [], theme: null };
+}
 
 const DEFAULT_CONFIG = {
   version: SCHEMA_VERSION,
@@ -831,12 +994,10 @@ const DEFAULT_CONFIG = {
     engine: 'https://www.google.com/search?q=%s',
     openIn: 'current',
   },
-  widgets: [],
+  aliases: {},
+  boards: [defaultBoard()],
+  activeBoard: null, // résolu vers boards[0].id à la migration
 };
-
-function uid() {
-  return 'w' + Math.random().toString(36).slice(2, 9);
-}
 
 function makeWidget(type, settings = {}, size = {}) {
   return {
@@ -848,16 +1009,8 @@ function makeWidget(type, settings = {}, size = {}) {
   };
 }
 
-function migrate(cfg) {
-  if (!cfg || typeof cfg !== 'object') return structuredClone(DEFAULT_CONFIG);
-  // Fusion superficielle par section : les nouvelles clés d'une version
-  // future arrivent avec leur valeur par défaut sans écraser l'existant.
-  const out = structuredClone(DEFAULT_CONFIG);
-  for (const k of ['theme', 'layout', 'search']) {
-    out[k] = { ...out[k], ...(cfg[k] || {}) };
-  }
-  out.widgets = Array.isArray(cfg.widgets) ? cfg.widgets : [];
-  out.widgets = out.widgets
+function sanitizeWidgets(list) {
+  return (Array.isArray(list) ? list : [])
     .filter((w) => w && typeof w.type === 'string')
     .map((w) => ({
       id: w.id || uid(),
@@ -866,6 +1019,47 @@ function migrate(cfg) {
       h: clamp(+w.h || 2, 1, 6),
       settings: w.settings && typeof w.settings === 'object' ? w.settings : {},
     }));
+}
+
+function sanitizeBoard(b) {
+  const theme = b && b.theme && typeof b.theme === 'object' && (b.theme.mode || b.theme.accent)
+    ? {
+        mode: b.theme.mode === 'light' ? 'light' : DEFAULT_CONFIG.theme.mode,
+        accent: typeof b.theme.accent === 'string' ? b.theme.accent : DEFAULT_CONFIG.theme.accent,
+      }
+    : null;
+  return {
+    id: (b && b.id) || uid('b'),
+    name: (b && typeof b.name === 'string' && b.name.trim()) || 'Sans titre',
+    widgets: sanitizeWidgets(b && b.widgets),
+    theme,
+  };
+}
+
+function migrate(cfg) {
+  if (!cfg || typeof cfg !== 'object') return migrate({});
+  // Fusion superficielle par section : les nouvelles clés d'une version
+  // future arrivent avec leur valeur par défaut sans écraser l'existant.
+  const out = structuredClone(DEFAULT_CONFIG);
+  for (const k of ['theme', 'layout', 'search']) {
+    out[k] = { ...out[k], ...(cfg[k] || {}) };
+  }
+  out.aliases = cfg.aliases && typeof cfg.aliases === 'object' ? { ...cfg.aliases } : {};
+
+  if (Array.isArray(cfg.boards) && cfg.boards.length) {
+    // Schéma v2 : plusieurs feuilles.
+    out.boards = cfg.boards.map(sanitizeBoard);
+  } else if (Array.isArray(cfg.widgets)) {
+    // Schéma v1 : une seule liste de modules à la racine — on l'enveloppe.
+    out.boards = [{ ...defaultBoard(), name: 'Principal', widgets: sanitizeWidgets(cfg.widgets) }];
+  } else {
+    out.boards = [defaultBoard()];
+  }
+
+  out.activeBoard = out.boards.some((b) => b.id === cfg.activeBoard)
+    ? cfg.activeBoard
+    : out.boards[0].id;
+
   out.version = SCHEMA_VERSION;
   return out;
 }
@@ -914,8 +1108,50 @@ const store = {
     listeners.forEach((fn) => fn(this.data));
   },
 
+  /** Le dashboard actif — celui qu'on affiche et qu'on édite. */
+  board() {
+    return this.data.boards.find((b) => b.id === this.data.activeBoard) || this.data.boards[0];
+  },
+
+  async addBoard(name) {
+    const b = { id: uid('b'), name: name?.trim() || 'Sans titre', widgets: [], theme: null };
+    this.data.boards.push(b);
+    this.data.activeBoard = b.id;
+    await this.save();
+    return b;
+  },
+
+  async renameBoard(id, name) {
+    const b = this.data.boards.find((x) => x.id === id);
+    if (!b || !name?.trim()) return;
+    b.name = name.trim();
+    await this.save();
+  },
+
+  async setBoardTheme(id, theme) {
+    const b = this.data.boards.find((x) => x.id === id);
+    if (!b) return;
+    b.theme = theme;
+    await this.save();
+  },
+
+  /** Refuse de supprimer le dernier dashboard restant. */
+  async removeBoard(id) {
+    if (this.data.boards.length <= 1) return false;
+    this.data.boards = this.data.boards.filter((b) => b.id !== id);
+    if (this.data.activeBoard === id) this.data.activeBoard = this.data.boards[0].id;
+    await this.save();
+    return true;
+  },
+
+  async setActiveBoard(id) {
+    if (!this.data.boards.some((b) => b.id === id) || id === this.data.activeBoard) return;
+    this.data.activeBoard = id;
+    await this.save();
+  },
+
   widget(id) {
-    return this.data.widgets.find((w) => w.id === id);
+    return this.board().widgets.find((w) => w.id === id);
   },
 
   async patchWidget(id, patch, opts) {
@@ -933,19 +1169,29 @@ const store = {
   },
 
   async addWidget(w) {
-    this.data.widgets.push(w);
+    this.board().widgets.push(w);
     await this.save();
     return w;
   },
 
   async removeWidget(id) {
-    this.data.widgets = this.data.widgets.filter((w) => w.id !== id);
+    const b = this.board();
+    b.widgets = b.widgets.filter((w) => w.id !== id);
     await this.save();
   },
 
   async reorder(ids) {
-    const map = new Map(this.data.widgets.map((w) => [w.id, w]));
-    this.data.widgets = ids.map((id) => map.get(id)).filter(Boolean);
+    const b = this.board();
+    const map = new Map(b.widgets.map((w) => [w.id, w]));
+    b.widgets = ids.map((id) => map.get(id)).filter(Boolean);
+    await this.save({ silent: true });
+  },
+
+  /** Alias local d'un favori (titre affiché seulement) — le vrai favori Chrome n'est jamais touché. */
+  async setAlias(bookmarkId, text) {
+    const clean = text?.trim();
+    if (clean) this.data.aliases[bookmarkId] = clean;
+    else delete this.data.aliases[bookmarkId];
     await this.save({ silent: true });
   },
 
@@ -968,7 +1214,7 @@ const store = {
   },
 
   async reset() {
-    this.data = structuredClone(DEFAULT_CONFIG);
+    this.data = migrate(structuredClone(DEFAULT_CONFIG));
     await chrome.storage.local.remove(WALL);
     this.wallpaper = null;
     await this.save();
@@ -1251,6 +1497,9 @@ async function renderField(f, values, set) {
       control,
       f.hint ? el('p', { class: 'field-hint', text: f.hint }) : null,
     ]);
+  } else if (f.type === 'datetime') {
+    control = el('input', { type: 'datetime-local', id, value: val || '' });
+    control.addEventListener('change', () => set(f.key, control.value));
   } else if (f.type === 'number') {
     control = el('input', { type: 'number', id, min: f.min, max: f.max, value: val ?? 0 });
     control.addEventListener('change', () => set(f.key, clamp(+control.value || 0, f.min ?? 0, f.max ?? 9999)));
@@ -1315,6 +1564,103 @@ function numberField(label, value, min, max, onSet) {
     onSet(v);
   });
   return el('div', { class: 'field' }, [el('label', { text: label }), input]);
+}
+
+/* ============================================================
+   Onglets (dashboards)
+   ============================================================ */
+
+function openAddBoard() {
+  const input = el('input', { type: 'text', placeholder: 'Ex. Streaming' });
+  const body = el('div', { class: 'field' }, [
+    el('label', { text: 'Nom du nouvel onglet' }), input,
+  ]);
+  const create = async () => {
+    await store.addBoard(input.value);
+    close();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
+  const footer = el('div', { style: { display: 'flex', justifyContent: 'flex-end', width: '100%' } }, [
+    el('button', { class: 'btn btn-primary', type: 'button', text: 'Créer', onclick: create }),
+  ]);
+  const close = openModal({ title: 'Nouvel onglet', body, footer });
+}
+
+async function openBoardSettings(boardId) {
+  const board = store.data.boards.find((b) => b.id === boardId);
+  if (!board) return;
+
+  const body = el('div');
+
+  const nameInput = el('input', { type: 'text', value: board.name });
+  nameInput.addEventListener('change', () => store.renameBoard(board.id, nameInput.value));
+  body.append(el('div', { class: 'field' }, [el('label', { text: 'Nom de l\'onglet' }), nameInput]));
+
+  body.append(el('p', { class: 'section-label', text: 'Thème de cet onglet' }));
+  const themeBox = el('div');
+  const toggle = el('input', { type: 'checkbox', checked: !!board.theme });
+
+  const renderThemeFields = async () => {
+    clear(themeBox);
+    if (!toggle.checked) return;
+    const values = {
+      mode: board.theme?.mode || store.data.theme.mode,
+      accent: board.theme?.accent || store.data.theme.accent,
+    };
+    const commit = () => store.setBoardTheme(board.id, { ...values });
+
+    themeBox.append(await renderFields([
+      { key: 'mode', label: 'Thème', type: 'select', options: [['dark', 'Encre'], ['light', 'Papier']] },
+    ], values, commit));
+
+    const swatches = el('div', { class: 'swatches' });
+    const custom = el('input', { type: 'color', value: values.accent });
+    const paint = (hex) => {
+      values.accent = hex;
+      custom.value = hex;
+      [...swatches.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.hex === hex)));
+      commit();
+    };
+    for (const hex of ACCENTS) {
+      swatches.append(el('button', {
+        class: 'swatch', type: 'button', 'data-hex': hex, 'aria-label': hex,
+        'aria-pressed': String(values.accent === hex),
+        style: { background: hex }, onclick: () => paint(hex),
+      }));
+    }
+    custom.addEventListener('change', () => paint(custom.value));
+    swatches.append(custom);
+    themeBox.append(el('div', { class: 'field' }, [el('label', { text: 'Accent' }), swatches]));
+  };
+
+  toggle.addEventListener('change', async () => {
+    board.theme = toggle.checked ? { mode: store.data.theme.mode, accent: store.data.theme.accent } : null;
+    await store.setBoardTheme(board.id, board.theme);
+    renderThemeFields();
+  });
+
+  body.append(el('div', { class: 'field field-inline' }, [
+    el('label', { text: 'Thème personnalisé (sinon, thème global)' }), toggle,
+  ]));
+  body.append(themeBox);
+  await renderThemeFields();
+
+  const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+    store.data.boards.length > 1 ? el('button', {
+      class: 'btn btn-danger', type: 'button', text: 'Supprimer l\'onglet',
+      onclick: async () => {
+        if (confirm(`Supprimer l'onglet « ${board.name} » et ses modules ?`)) {
+          await store.removeBoard(board.id);
+          close();
+          toast('Onglet supprimé');
+        }
+      },
+    }) : null,
+    el('span', { style: { flex: '1' } }),
+    el('button', { class: 'btn btn-primary', type: 'button', text: 'Fermer', onclick: () => close() }),
+  ]);
+
+  const close = openModal({ title: 'Réglages de l\'onglet', body, footer });
 }
 
 /* ============================================================
@@ -1433,6 +1779,10 @@ async function openSettings() {
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
   ], s, save));
+  body.append(el('p', {
+    class: 'field-hint',
+    text: 'Préfixes : g: yt: gh: wiki: maps: img: ddg: — ex. « yt: chats » saute direct sur YouTube.',
+  }));
 
   /* — Données — */
   body.append(el('p', { class: 'section-label', text: 'Données' }));
@@ -1524,10 +1874,10 @@ defineWidget({
     { key: 'folderId', label: 'Dossier', type: 'folder' },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
-      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense']],
+      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
     },
     { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre du dossier'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
@@ -1622,26 +1972,29 @@ defineWidget({
       }
 
       const tiles = s.view === 'tiles';
+      const badges = s.view === 'badges';
       const wrap = el('div', {
-        class: tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
+        class: badges ? 'bm-badges' : tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
       });
       if (tiles) {
         wrap.style.setProperty('--tile', `${s.tile}px`);
         wrap.style.setProperty('--icon', `${s.icon}px`);
+      } else if (badges) {
+        wrap.style.setProperty('--icon', `${s.icon}px`);
       }
 
       for (const node of items) {
-        wrap.append(node.url ? linkNode(node, tiles) : folderNode(node, tiles));
+        wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
       }
       body.append(wrap);
     }
 
-    function iconFor(node, tiles) {
+    function iconFor(node, size) {
       if (!node.url) {
         return el('span', { class: 'glyph', text: '▸' });
       }
       const img = el('img', {
-        src: faviconUrl(node.url, tiles ? Math.max(32, s.icon * 2) : 32),
+        src: faviconUrl(node.url, size ? Math.max(32, s.icon * 2) : 32),
         alt: '', loading: 'lazy',
       });
       img.addEventListener('error', () => {
@@ -1650,32 +2003,61 @@ defineWidget({
       return img;
     }
 
-    function linkNode(node, tiles) {
+    /** Renomme localement un favori — n'écrit jamais dans les vrais favoris Chrome. */
+    function renameNode(node) {
+      const current = store.data.aliases[node.id] || '';
+      const input = el('input', { type: 'text', value: current, placeholder: node.title || hostOf(node.url) });
+      const body2 = el('div', { class: 'field' }, [
+        el('label', { text: 'Nom affiché (local à Atelier, le favori n\'est pas modifié)' }), input,
+      ]);
+      const commit = async (value) => {
+        await store.setAlias(node.id, value);
+        close();
+        render();
+        toast(value ? 'Nom mis à jour' : 'Nom réinitialisé');
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(input.value); });
+      const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+        current ? el('button', { class: 'btn', type: 'button', text: 'Réinitialiser', onclick: () => commit('') }) : null,
+        el('span', { style: { flex: '1' } }),
+        el('button', { class: 'btn btn-primary', type: 'button', text: 'Enregistrer', onclick: () => commit(input.value) }),
+      ]);
+      const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
+    }
+
+    function linkNode(node, tiles, badges) {
       // textContent partout : un titre de favori peut contenir du HTML.
-      const label = node.title || hostOf(node.url);
+      const alias = store.data.aliases[node.id];
+      const label = alias || node.title || hostOf(node.url);
       const a = el('a', {
-        class: tiles ? 'tile' : 'row',
+        class: badges ? 'badge' : tiles ? 'tile' : 'row',
         href: node.url,
         title: `${label}\n${node.url}`,
         onclick: (e) => openLink(node.url, s.openIn, e),
         onauxclick: (e) => openLink(node.url, s.openIn, e),
       });
-      a.append(iconFor(node, tiles));
-      a.append(el('span', { class: 'label', text: label }));
-      if (!tiles) a.append(el('span', { class: 'host', text: hostOf(node.url) }));
+      a.append(iconFor(node, tiles || badges));
+      if (!badges) {
+        a.append(el('span', { class: 'label', text: label }));
+        a.append(el('button', {
+          class: 'bm-rename', type: 'button', title: 'Renommer (local)', text: '✎',
+          onclick: (e) => { e.preventDefault(); e.stopPropagation(); renameNode(node); },
+        }));
+      }
+      if (!tiles && !badges) a.append(el('span', { class: 'host', text: hostOf(node.url) }));
       return a;
     }
 
-    function folderNode(node, tiles) {
+    function folderNode(node, tiles, badges) {
       const b = el('button', {
-        class: tiles ? 'tile' : 'row',
+        class: badges ? 'badge' : tiles ? 'tile' : 'row',
         type: 'button',
         title: node.title,
         style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
         onclick: () => { stack.push(node); render(); },
       });
       b.append(el('span', { class: 'glyph', text: '▸' }));
-      b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
+      if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
       return b;
     }
 
@@ -1706,12 +2088,17 @@ defineWidget({
   name: 'Horloge',
   blurb: 'Heure et date, format québécois.',
   defaultSize: { w: 3, h: 1 },
-  defaults: { seconds: false, hour12: false, date: true, label: 'Horloge' },
+  defaults: { seconds: false, hour12: false, date: true, label: 'Horloge', tz2: '', tz2Label: '' },
   fields: [
     { key: 'label', label: 'Titre du module', type: 'text' },
     { key: 'hour12', label: 'Format 12 h (AM/PM)', type: 'boolean' },
     { key: 'seconds', label: 'Afficher les secondes', type: 'boolean' },
     { key: 'date', label: 'Afficher la date', type: 'boolean' },
+    {
+      key: 'tz2', label: 'Second fuseau horaire', type: 'text',
+      hint: 'Nom IANA, ex. Europe/Paris ou Asia/Tokyo. Vide = désactivé.',
+    },
+    { key: 'tz2Label', label: 'Étiquette du second fuseau', type: 'text', when: (s) => !!s.tz2 },
   ],
   title: (w) => w.settings.label || 'Horloge',
 
@@ -1719,7 +2106,8 @@ defineWidget({
     const s = ctx.settings;
     const time = el('div', { class: 'clock-time', text: '--:--' });
     const date = el('div', { class: 'clock-date' });
-    const wrap = el('div', { class: 'clock' }, [time, s.date ? date : null]);
+    const tz2 = el('div', { class: 'clock-tz2' });
+    const wrap = el('div', { class: 'clock' }, [time, s.date ? date : null, s.tz2 ? tz2 : null]);
     clear(body);
     body.append(wrap);
 
@@ -1731,14 +2119,67 @@ defineWidget({
     const df = new Intl.DateTimeFormat('fr-CA', {
       weekday: 'long', day: 'numeric', month: 'long',
     });
+    let tf2 = null;
+    if (s.tz2) {
+      try {
+        tf2 = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: !!s.hour12, timeZone: s.tz2 });
+      } catch { tf2 = null; }
+    }
 
     const tick = () => {
       const now = new Date();
       time.textContent = tf.format(now);
       if (s.date) date.textContent = df.format(now);
+      if (s.tz2) tz2.textContent = tf2 ? `${s.tz2Label || s.tz2} · ${tf2.format(now)}` : 'Fuseau invalide';
     };
     tick();
     const id = setInterval(tick, s.seconds ? 1000 : 15000);
+    return () => clearInterval(id);
+  },
+});
+
+/* ---------- Compte à rebours ---------- */
+
+defineWidget({
+  type: 'countdown',
+  name: 'Compte à rebours',
+  blurb: 'Temps restant jusqu\'à une date : rendez-vous, échéance.',
+  defaultSize: { w: 3, h: 1 },
+  defaults: { label: 'Compte à rebours', target: '', doneText: 'C\'est aujourd\'hui !' },
+  fields: [
+    { key: 'label', label: 'Titre du module', type: 'text' },
+    { key: 'target', label: 'Date et heure cible', type: 'datetime' },
+    { key: 'doneText', label: 'Texte à l\'échéance', type: 'text' },
+  ],
+  title: (w) => w.settings.label || 'Compte à rebours',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    const big = el('div', { class: 'countdown-big', text: '—' });
+    const sub = el('div', { class: 'countdown-sub' });
+    clear(body);
+    body.append(el('div', { class: 'countdown' }, [big, sub]));
+
+    if (!s.target) {
+      sub.textContent = 'Choisis une date dans les réglages du module.';
+      return () => {};
+    }
+
+    const targetMs = new Date(s.target).getTime();
+    const df = new Intl.DateTimeFormat('fr-CA', { dateStyle: 'long', timeStyle: 'short' });
+
+    const tick = () => {
+      if (Number.isNaN(targetMs)) { big.textContent = '—'; sub.textContent = 'Date invalide.'; return; }
+      const diff = targetMs - Date.now();
+      if (diff <= 0) { big.textContent = '🎉'; sub.textContent = s.doneText || 'C\'est aujourd\'hui !'; return; }
+      const days = Math.floor(diff / 86_400_000);
+      const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+      const mins = Math.floor((diff % 3_600_000) / 60_000);
+      big.textContent = days > 0 ? `${days} j` : hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+      sub.textContent = df.format(new Date(targetMs));
+    };
+    tick();
+    const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   },
 });
@@ -1836,8 +2277,320 @@ defineWidget({
   },
 });
 
+/* ==== js/widgets/googletools.js ==== */
+/* Liste fixe : pas d'appel réseau, juste des liens vers les outils Google usuels. */
+const TOOLS = [
+  ['Gmail', 'https://mail.google.com/'],
+  ['Agenda', 'https://calendar.google.com/'],
+  ['Drive', 'https://drive.google.com/'],
+  ['Docs', 'https://docs.google.com/document/u/0/'],
+  ['Sheets', 'https://docs.google.com/spreadsheets/u/0/'],
+  ['Slides', 'https://docs.google.com/presentation/u/0/'],
+  ['Meet', 'https://meet.google.com/'],
+  ['Photos', 'https://photos.google.com/'],
+  ['Maps', 'https://maps.google.com/'],
+  ['Keep', 'https://keep.google.com/'],
+  ['Traduction', 'https://translate.google.com/'],
+  ['Actualités', 'https://news.google.com/'],
+];
+
+defineWidget({
+  type: 'googletools',
+  name: 'Outils Google',
+  blurb: 'Raccourcis vers Gmail, Drive, Agenda, etc. Aucune donnée transmise par l\'extension.',
+  defaultSize: { w: 4, h: 2 },
+  defaults: { view: 'tiles', tile: 76, icon: 26, openIn: 'current' },
+  fields: [
+    { key: 'view', label: 'Affichage', type: 'select', gates: true, options: [['tiles', 'Tuiles'], ['list', 'Liste']] },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
+    {
+      key: 'openIn', label: 'Ouvrir les liens', type: 'select',
+      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
+    },
+  ],
+  title: () => 'Outils Google',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    const tiles = s.view === 'tiles';
+    const wrap = el('div', { class: tiles ? 'bm-tiles' : 'bm-list' });
+    if (tiles) {
+      wrap.style.setProperty('--tile', `${s.tile}px`);
+      wrap.style.setProperty('--icon', `${s.icon}px`);
+    }
+
+    for (const [label, url] of TOOLS) {
+      const a = el('a', {
+        class: tiles ? 'tile' : 'row',
+        href: url,
+        title: `${label}\n${url}`,
+        onclick: (e) => openLink(url, s.openIn, e),
+        onauxclick: (e) => openLink(url, s.openIn, e),
+      });
+      const img = el('img', { src: faviconUrl(url, tiles ? 48 : 32), alt: '', loading: 'lazy' });
+      img.addEventListener('error', () => {
+        img.replaceWith(el('span', { class: 'glyph', text: initial(label, url) }));
+      });
+      a.append(img, el('span', { class: 'label', text: label }));
+      if (!tiles) a.append(el('span', { class: 'host', text: new URL(url).hostname.replace(/^www\./, '') }));
+      wrap.append(a);
+    }
+
+    clear(body);
+    body.append(wrap);
+    return () => {};
+  },
+});
+
+/* ==== js/widgets/folder.js ==== */
+/* Petit widget « dossier » façon écran d'accueil de téléphone : un aperçu
+   réduit sur la feuille, qui s'ouvre en grille plein écran au clic. */
+
+defineWidget({
+  type: 'folder',
+  name: 'Dossier',
+  blurb: 'Aperçu compact d\'un dossier de favoris — s\'ouvre en grille au clic.',
+  defaultSize: { w: 2, h: 1 },
+  defaults: { folderId: null, folderPath: '', label: '' },
+  fields: [
+    { key: 'folderId', label: 'Dossier', type: 'folder' },
+    { key: 'label', label: 'Titre (vide = nom du dossier)', type: 'text' },
+  ],
+
+  title(w) {
+    return w.settings.label || w.settings.folderPath?.split(' / ').pop() || 'Dossier';
+  },
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    let alive = true;
+
+    async function resolveRoot() {
+      if (s.folderId) {
+        try {
+          const [node] = await chrome.bookmarks.get(String(s.folderId));
+          if (node) return node.id;
+        } catch { /* id mort : on tente le chemin */ }
+      }
+      if (s.folderPath) {
+        const found = await findFolderByPath(s.folderPath);
+        if (found) {
+          ctx.update({ folderId: found.id });
+          return found.id;
+        }
+      }
+      return null;
+    }
+
+    function thumb(node) {
+      if (!node.url) return el('span', { class: 'glyph', text: '▸' });
+      const img = el('img', { src: faviconUrl(node.url, 32), alt: '', loading: 'lazy' });
+      img.addEventListener('error', () => {
+        img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
+      });
+      return img;
+    }
+
+    async function render() {
+      if (!alive) return;
+      clear(body);
+
+      const rootId = await resolveRoot();
+      if (!rootId) {
+        body.append(el('p', { class: 'note', text: 'Aucun dossier choisi. Ouvre les réglages du module.' }));
+        return;
+      }
+
+      let children = [];
+      try { children = await chrome.bookmarks.getChildren(rootId); } catch { /* dossier introuvable */ }
+
+      const name = s.label || s.folderPath?.split(' / ').pop() || 'Dossier';
+      const preview = el('div', { class: 'folder-preview' });
+      children.slice(0, 4).forEach((n) => preview.append(thumb(n)));
+      for (let i = children.length; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+
+      body.append(el('button', {
+        class: 'folder-open', type: 'button', title: name,
+        onclick: () => openFolderModal(rootId, name),
+      }, [preview, el('span', { class: 'folder-name', text: name })]));
+    }
+
+    render();
+    const refresh = () => render();
+    for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
+      chrome.bookmarks[ev].addListener(refresh);
+    }
+
+    return () => {
+      alive = false;
+      for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
+        chrome.bookmarks[ev].removeListener(refresh);
+      }
+    };
+  },
+});
+
+/** Grille plein écran, façon écran d'accueil, avec navigation dans les sous-dossiers. */
+function openFolderModal(rootId, title) {
+  let stack = [];
+  const grid = el('div', { class: 'folder-grid' });
+  const crumbs = el('nav', { class: 'bm-crumbs' });
+
+  async function draw() {
+    clear(grid);
+    clear(crumbs);
+    const currentId = stack.length ? stack[stack.length - 1].id : rootId;
+    let children = [];
+    try { children = await chrome.bookmarks.getChildren(currentId); } catch { /* rien */ }
+
+    if (stack.length) {
+      crumbs.append(el('button', { type: 'button', text: '← racine', onclick: () => { stack = []; draw(); } }));
+      stack.forEach((node, i) => {
+        crumbs.append(el('span', { text: '/' }));
+        crumbs.append(el('button', {
+          type: 'button', text: node.title || '(sans nom)',
+          onclick: () => { stack = stack.slice(0, i + 1); draw(); },
+        }));
+      });
+    }
+
+    for (const node of children) {
+      grid.append(node.url ? linkTile(node) : folderTile(node));
+    }
+    if (!children.length) grid.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+  }
+
+  function linkTile(node) {
+    const label = node.title || hostOf(node.url);
+    const a = el('a', {
+      class: 'tile', href: node.url, title: `${label}\n${node.url}`,
+      onclick: (e) => openLink(node.url, 'current', e),
+      onauxclick: (e) => openLink(node.url, 'current', e),
+    });
+    const img = el('img', { src: faviconUrl(node.url, 48), alt: '', loading: 'lazy' });
+    img.addEventListener('error', () => {
+      img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
+    });
+    a.append(img, el('span', { class: 'label', text: label }));
+    return a;
+  }
+
+  function folderTile(node) {
+    const b = el('button', {
+      class: 'tile', type: 'button',
+      style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit' },
+      onclick: () => { stack.push(node); draw(); },
+    });
+    b.append(el('span', { class: 'glyph', text: '▸' }), el('span', { class: 'label', text: node.title || '(sans nom)' }));
+    return b;
+  }
+
+  draw();
+  openModal({ title, body: el('div', {}, [crumbs, grid]) });
+}
+
+/* ==== js/widgets/weather.js ==== */
+/* Open-Meteo : gratuit, sans clé API. Seul widget de l'extension qui fait
+   une requête réseau — voir docs/STORE.md pour la justification du
+   host_permissions correspondant dans le manifeste. */
+
+function weatherIcon(code) {
+  if (code === 0) return '☀️';
+  if (code === 1 || code === 2) return '⛅';
+  if (code === 3) return '☁️';
+  if (code === 45 || code === 48) return '🌫️';
+  if ([51, 53, 55, 56, 57].includes(code)) return '🌦️';
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return '🌧️';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return '🌨️';
+  if ([95, 96, 99].includes(code)) return '⛈️';
+  return '🌡️';
+}
+
+defineWidget({
+  type: 'weather',
+  name: 'Météo',
+  blurb: 'Température et conditions actuelles, via Open-Meteo (aucune clé API).',
+  defaultSize: { w: 3, h: 1 },
+  defaults: { city: '', label: '', lat: null, lon: null, resolvedName: '', geocodedCity: '' },
+  fields: [
+    { key: 'city', label: 'Ville', type: 'text', hint: 'Ex. Saint-Hippolyte, QC' },
+    { key: 'label', label: 'Titre du module (vide = ville)', type: 'text' },
+  ],
+  title: (w) => w.settings.label || w.settings.resolvedName || 'Météo',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    let alive = true;
+    const wrap = el('div', { class: 'weather' });
+    clear(body);
+    body.append(wrap);
+
+    async function geocode(city) {
+      const u = new URL('https://geocoding-api.open-meteo.com/v1/search');
+      u.searchParams.set('name', city);
+      u.searchParams.set('count', '1');
+      u.searchParams.set('language', 'fr');
+      u.searchParams.set('format', 'json');
+      const res = await fetch(u);
+      if (!res.ok) throw new Error('geocode');
+      const hit = (await res.json()).results?.[0];
+      if (!hit) throw new Error('not-found');
+      return { lat: hit.latitude, lon: hit.longitude, name: [hit.name, hit.admin1].filter(Boolean).join(', ') };
+    }
+
+    async function fetchCurrent(lat, lon) {
+      const u = new URL('https://api.open-meteo.com/v1/forecast');
+      u.searchParams.set('latitude', lat);
+      u.searchParams.set('longitude', lon);
+      u.searchParams.set('current', 'temperature_2m,weather_code');
+      u.searchParams.set('timezone', 'auto');
+      const res = await fetch(u);
+      if (!res.ok) throw new Error('forecast');
+      return (await res.json()).current;
+    }
+
+    async function load() {
+      if (!s.city?.trim()) {
+        clear(wrap);
+        wrap.append(el('p', { class: 'note', text: 'Choisis une ville dans les réglages du module.' }));
+        return;
+      }
+      clear(wrap);
+      wrap.append(el('p', { class: 'note', text: 'Chargement…' }));
+      try {
+        let { lat, lon, resolvedName } = s;
+        if (!lat || !lon || s.geocodedCity !== s.city) {
+          const g = await geocode(s.city);
+          lat = g.lat; lon = g.lon; resolvedName = g.name;
+          await ctx.update({ lat, lon, resolvedName, geocodedCity: s.city }, { silent: true });
+        }
+        const cur = await fetchCurrent(lat, lon);
+        if (!alive) return;
+        clear(wrap);
+        wrap.append(
+          el('div', { class: 'weather-icon', text: weatherIcon(cur.weather_code) }),
+          el('div', { class: 'weather-temp', text: `${Math.round(cur.temperature_2m)}°C` }),
+          el('div', { class: 'weather-place', text: resolvedName || s.city }),
+        );
+      } catch {
+        if (!alive) return;
+        clear(wrap);
+        wrap.append(el('p', { class: 'note', text: 'Météo indisponible. Vérifie la ville ou ta connexion.' }));
+      }
+    }
+
+    load();
+    const id = setInterval(load, 15 * 60_000);
+    return () => { alive = false; clearInterval(id); };
+  },
+});
+
 /* ==== js/app.js ==== */
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
+
+
+
 
 
 const $ = (id) => document.getElementById(id);
@@ -1851,7 +2604,9 @@ let lastSig = '';
    ============================================================ */
 
 function applyTheme() {
-  const { theme: t, layout: l } = store.data;
+  const board = store.board();
+  const t = { ...store.data.theme, ...(board.theme || {}) };
+  const { layout: l } = store.data;
   const r = document.documentElement;
 
   r.dataset.mode = t.mode;
@@ -1891,14 +2646,44 @@ function contrastInk(hex) {
 }
 
 /* ============================================================
+   Onglets (dashboards)
+   ============================================================ */
+
+function renderBoards() {
+  const bar = $('boards');
+  clear(bar);
+  for (const b of store.data.boards) {
+    const active = b.id === store.data.activeBoard;
+    const tab = el('button', {
+      class: `board-tab${active ? ' is-active' : ''}`,
+      type: 'button',
+      onclick: () => store.setActiveBoard(b.id),
+    }, [el('span', { class: 'board-tab-name', text: b.name })]);
+    if (active) {
+      tab.append(el('button', {
+        class: 'board-tab-gear', type: 'button', title: 'Réglages de l\'onglet',
+        onclick: (e) => { e.stopPropagation(); openBoardSettings(b.id); },
+        text: '⚙',
+      }));
+    }
+    bar.append(tab);
+  }
+  bar.append(el('button', {
+    class: 'board-tab board-tab-add', type: 'button', title: 'Nouvel onglet', text: '+',
+    onclick: openAddBoard,
+  }));
+}
+
+/* ============================================================
    Rendu de la feuille
    ============================================================ */
 
 function sig() {
-  return JSON.stringify(store.data.widgets);
+  return store.data.activeBoard + '|' + JSON.stringify(store.board().widgets);
 }
 
 function render() {
+  renderBoards();
   applyTheme();
   const s = sig();
   if (s === lastSig) return;   // changement de thème seul : pas de remontage
@@ -1911,7 +2696,7 @@ function rebuild() {
   mounted.clear();
   clear(grid);
 
-  const list = store.data.widgets;
+  const list = store.board().widgets;
   $('empty').hidden = list.length > 0;
 
   list.forEach((w, i) => {
@@ -2082,6 +2867,29 @@ function setEditing(on) {
    Recherche
    ============================================================ */
 
+/* Préfixes de recherche : "yt: chats" saute direct sur YouTube. */
+const SEARCH_PREFIXES = [
+  ['g:', 'Google', 'https://www.google.com/search?q=%s'],
+  ['yt:', 'YouTube', 'https://www.youtube.com/results?search_query=%s'],
+  ['gh:', 'GitHub', 'https://github.com/search?q=%s'],
+  ['wiki:', 'Wikipédia', 'https://fr.wikipedia.org/w/index.php?search=%s'],
+  ['maps:', 'Maps', 'https://www.google.com/maps/search/%s'],
+  ['img:', 'Images', 'https://www.google.com/search?tbm=isch&q=%s'],
+  ['ddg:', 'DuckDuckGo', 'https://duckduckgo.com/?q=%s'],
+];
+
+function matchPrefix(q) {
+  const trimmed = q.trimStart();
+  const low = trimmed.toLowerCase();
+  for (const [prefix, label, tpl] of SEARCH_PREFIXES) {
+    if (low.startsWith(prefix)) {
+      const rest = trimmed.slice(prefix.length).trim();
+      return { label, rest, url: tpl.replace('%s', encodeURIComponent(rest)) };
+    }
+  }
+  return null;
+}
+
 const omni = $('omni');
 const results = $('omniResults');
 let hits = [];
@@ -2089,6 +2897,13 @@ let cursor = -1;
 
 const search = debounce(async (q) => {
   if (!q.trim()) return hideResults();
+  const prefixed = matchPrefix(q);
+  if (prefixed) {
+    hits = [];
+    cursor = -1;
+    drawPrefixResult(prefixed);
+    return;
+  }
   let found = [];
   try {
     found = await chrome.bookmarks.search({ query: q });
@@ -2097,6 +2912,21 @@ const search = debounce(async (q) => {
   cursor = hits.length ? 0 : -1;
   drawResults(q);
 }, 90);
+
+function drawPrefixResult(p) {
+  clear(results);
+  results.hidden = false;
+  results.append(el('li', {
+    class: 'omni-item', role: 'option', 'aria-selected': 'true',
+    onclick: (e) => go(p.url, e),
+  }, [
+    el('span', { class: 'glyph', text: '↵' }),
+    el('span', {
+      class: 'omni-title',
+      text: p.rest ? `Rechercher « ${p.rest} » sur ${p.label}` : `Rechercher sur ${p.label}`,
+    }),
+  ]));
+}
 
 function drawResults(q) {
   clear(results);
@@ -2158,6 +2988,8 @@ omni.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowUp' && hits.length) { e.preventDefault(); cursor = (cursor - 1 + hits.length) % hits.length; syncSelection(); }
   else if (e.key === 'Enter') {
     e.preventDefault();
+    const prefixed = matchPrefix(omni.value);
+    if (prefixed) { go(prefixed.url, e); return; }
     const pick = hits[cursor];
     if (pick) go(pick.url, e);
     else if (omni.value.trim()) {
@@ -2208,6 +3040,16 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '/') { e.preventDefault(); omni.focus(); }
   else if (e.key === 'e' || e.key === 'E') { setEditing(!editing); }
   else if (e.key === 'Escape' && editing) { setEditing(false); }
+  else if (e.altKey && /^[1-9]$/.test(e.key)) {
+    // Alt+1..9 : saute au module correspondant à sa position sur la feuille active.
+    const node = grid.children[+e.key - 1];
+    if (node) {
+      e.preventDefault();
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.classList.add('flash');
+      setTimeout(() => node.classList.remove('flash'), 900);
+    }
+  }
 });
 
 /* ============================================================
@@ -2219,7 +3061,7 @@ async function seed() {
   const roots = tree[0]?.children || [];
   const bar = roots.find((n) => !n.url) || roots[0];
 
-  store.data.widgets = [
+  store.board().widgets = [
     makeWidget('bookmarks', {
       folderId: bar?.id ?? null,
       folderPath: bar?.title || '',
@@ -2237,7 +3079,7 @@ async function seed() {
 
 (async function boot() {
   await store.load();
-  if (!store.data.widgets.length) {
+  if (!store.board().widgets.length) {
     try { await seed(); } catch { /* pas de favoris : feuille vide */ }
   }
 

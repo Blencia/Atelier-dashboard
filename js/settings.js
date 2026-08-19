@@ -90,6 +90,9 @@ async function renderField(f, values, set) {
       control,
       f.hint ? el('p', { class: 'field-hint', text: f.hint }) : null,
     ]);
+  } else if (f.type === 'datetime') {
+    control = el('input', { type: 'datetime-local', id, value: val || '' });
+    control.addEventListener('change', () => set(f.key, control.value));
   } else if (f.type === 'number') {
     control = el('input', { type: 'number', id, min: f.min, max: f.max, value: val ?? 0 });
     control.addEventListener('change', () => set(f.key, clamp(+control.value || 0, f.min ?? 0, f.max ?? 9999)));
@@ -154,6 +157,103 @@ function numberField(label, value, min, max, onSet) {
     onSet(v);
   });
   return el('div', { class: 'field' }, [el('label', { text: label }), input]);
+}
+
+/* ============================================================
+   Onglets (dashboards)
+   ============================================================ */
+
+export function openAddBoard() {
+  const input = el('input', { type: 'text', placeholder: 'Ex. Streaming' });
+  const body = el('div', { class: 'field' }, [
+    el('label', { text: 'Nom du nouvel onglet' }), input,
+  ]);
+  const create = async () => {
+    await store.addBoard(input.value);
+    close();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
+  const footer = el('div', { style: { display: 'flex', justifyContent: 'flex-end', width: '100%' } }, [
+    el('button', { class: 'btn btn-primary', type: 'button', text: 'Créer', onclick: create }),
+  ]);
+  const close = openModal({ title: 'Nouvel onglet', body, footer });
+}
+
+export async function openBoardSettings(boardId) {
+  const board = store.data.boards.find((b) => b.id === boardId);
+  if (!board) return;
+
+  const body = el('div');
+
+  const nameInput = el('input', { type: 'text', value: board.name });
+  nameInput.addEventListener('change', () => store.renameBoard(board.id, nameInput.value));
+  body.append(el('div', { class: 'field' }, [el('label', { text: 'Nom de l\'onglet' }), nameInput]));
+
+  body.append(el('p', { class: 'section-label', text: 'Thème de cet onglet' }));
+  const themeBox = el('div');
+  const toggle = el('input', { type: 'checkbox', checked: !!board.theme });
+
+  const renderThemeFields = async () => {
+    clear(themeBox);
+    if (!toggle.checked) return;
+    const values = {
+      mode: board.theme?.mode || store.data.theme.mode,
+      accent: board.theme?.accent || store.data.theme.accent,
+    };
+    const commit = () => store.setBoardTheme(board.id, { ...values });
+
+    themeBox.append(await renderFields([
+      { key: 'mode', label: 'Thème', type: 'select', options: [['dark', 'Encre'], ['light', 'Papier']] },
+    ], values, commit));
+
+    const swatches = el('div', { class: 'swatches' });
+    const custom = el('input', { type: 'color', value: values.accent });
+    const paint = (hex) => {
+      values.accent = hex;
+      custom.value = hex;
+      [...swatches.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.hex === hex)));
+      commit();
+    };
+    for (const hex of ACCENTS) {
+      swatches.append(el('button', {
+        class: 'swatch', type: 'button', 'data-hex': hex, 'aria-label': hex,
+        'aria-pressed': String(values.accent === hex),
+        style: { background: hex }, onclick: () => paint(hex),
+      }));
+    }
+    custom.addEventListener('change', () => paint(custom.value));
+    swatches.append(custom);
+    themeBox.append(el('div', { class: 'field' }, [el('label', { text: 'Accent' }), swatches]));
+  };
+
+  toggle.addEventListener('change', async () => {
+    board.theme = toggle.checked ? { mode: store.data.theme.mode, accent: store.data.theme.accent } : null;
+    await store.setBoardTheme(board.id, board.theme);
+    renderThemeFields();
+  });
+
+  body.append(el('div', { class: 'field field-inline' }, [
+    el('label', { text: 'Thème personnalisé (sinon, thème global)' }), toggle,
+  ]));
+  body.append(themeBox);
+  await renderThemeFields();
+
+  const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+    store.data.boards.length > 1 ? el('button', {
+      class: 'btn btn-danger', type: 'button', text: 'Supprimer l\'onglet',
+      onclick: async () => {
+        if (confirm(`Supprimer l'onglet « ${board.name} » et ses modules ?`)) {
+          await store.removeBoard(board.id);
+          close();
+          toast('Onglet supprimé');
+        }
+      },
+    }) : null,
+    el('span', { style: { flex: '1' } }),
+    el('button', { class: 'btn btn-primary', type: 'button', text: 'Fermer', onclick: () => close() }),
+  ]);
+
+  const close = openModal({ title: 'Réglages de l\'onglet', body, footer });
 }
 
 /* ============================================================
@@ -272,6 +372,10 @@ export async function openSettings() {
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
   ], s, save));
+  body.append(el('p', {
+    class: 'field-hint',
+    text: 'Préfixes : g: yt: gh: wiki: maps: img: ddg: — ex. « yt: chats » saute direct sur YouTube.',
+  }));
 
   /* — Données — */
   body.append(el('p', { class: 'section-label', text: 'Données' }));

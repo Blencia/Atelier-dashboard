@@ -8,12 +8,17 @@ defineWidget({
   name: 'Horloge',
   blurb: 'Heure et date, format québécois.',
   defaultSize: { w: 3, h: 1 },
-  defaults: { seconds: false, hour12: false, date: true, label: 'Horloge' },
+  defaults: { seconds: false, hour12: false, date: true, label: 'Horloge', tz2: '', tz2Label: '' },
   fields: [
     { key: 'label', label: 'Titre du module', type: 'text' },
     { key: 'hour12', label: 'Format 12 h (AM/PM)', type: 'boolean' },
     { key: 'seconds', label: 'Afficher les secondes', type: 'boolean' },
     { key: 'date', label: 'Afficher la date', type: 'boolean' },
+    {
+      key: 'tz2', label: 'Second fuseau horaire', type: 'text',
+      hint: 'Nom IANA, ex. Europe/Paris ou Asia/Tokyo. Vide = désactivé.',
+    },
+    { key: 'tz2Label', label: 'Étiquette du second fuseau', type: 'text', when: (s) => !!s.tz2 },
   ],
   title: (w) => w.settings.label || 'Horloge',
 
@@ -21,7 +26,8 @@ defineWidget({
     const s = ctx.settings;
     const time = el('div', { class: 'clock-time', text: '--:--' });
     const date = el('div', { class: 'clock-date' });
-    const wrap = el('div', { class: 'clock' }, [time, s.date ? date : null]);
+    const tz2 = el('div', { class: 'clock-tz2' });
+    const wrap = el('div', { class: 'clock' }, [time, s.date ? date : null, s.tz2 ? tz2 : null]);
     clear(body);
     body.append(wrap);
 
@@ -33,14 +39,67 @@ defineWidget({
     const df = new Intl.DateTimeFormat('fr-CA', {
       weekday: 'long', day: 'numeric', month: 'long',
     });
+    let tf2 = null;
+    if (s.tz2) {
+      try {
+        tf2 = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: !!s.hour12, timeZone: s.tz2 });
+      } catch { tf2 = null; }
+    }
 
     const tick = () => {
       const now = new Date();
       time.textContent = tf.format(now);
       if (s.date) date.textContent = df.format(now);
+      if (s.tz2) tz2.textContent = tf2 ? `${s.tz2Label || s.tz2} · ${tf2.format(now)}` : 'Fuseau invalide';
     };
     tick();
     const id = setInterval(tick, s.seconds ? 1000 : 15000);
+    return () => clearInterval(id);
+  },
+});
+
+/* ---------- Compte à rebours ---------- */
+
+defineWidget({
+  type: 'countdown',
+  name: 'Compte à rebours',
+  blurb: 'Temps restant jusqu\'à une date : rendez-vous, échéance.',
+  defaultSize: { w: 3, h: 1 },
+  defaults: { label: 'Compte à rebours', target: '', doneText: 'C\'est aujourd\'hui !' },
+  fields: [
+    { key: 'label', label: 'Titre du module', type: 'text' },
+    { key: 'target', label: 'Date et heure cible', type: 'datetime' },
+    { key: 'doneText', label: 'Texte à l\'échéance', type: 'text' },
+  ],
+  title: (w) => w.settings.label || 'Compte à rebours',
+
+  mount(body, ctx) {
+    const s = ctx.settings;
+    const big = el('div', { class: 'countdown-big', text: '—' });
+    const sub = el('div', { class: 'countdown-sub' });
+    clear(body);
+    body.append(el('div', { class: 'countdown' }, [big, sub]));
+
+    if (!s.target) {
+      sub.textContent = 'Choisis une date dans les réglages du module.';
+      return () => {};
+    }
+
+    const targetMs = new Date(s.target).getTime();
+    const df = new Intl.DateTimeFormat('fr-CA', { dateStyle: 'long', timeStyle: 'short' });
+
+    const tick = () => {
+      if (Number.isNaN(targetMs)) { big.textContent = '—'; sub.textContent = 'Date invalide.'; return; }
+      const diff = targetMs - Date.now();
+      if (diff <= 0) { big.textContent = '🎉'; sub.textContent = s.doneText || 'C\'est aujourd\'hui !'; return; }
+      const days = Math.floor(diff / 86_400_000);
+      const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+      const mins = Math.floor((diff % 3_600_000) / 60_000);
+      big.textContent = days > 0 ? `${days} j` : hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+      sub.textContent = df.format(new Date(targetMs));
+    };
+    tick();
+    const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   },
 });

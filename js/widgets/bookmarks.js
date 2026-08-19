@@ -1,5 +1,6 @@
 import { defineWidget } from '../registry.js';
-import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath } from '../ui.js';
+import { store } from '../store.js';
+import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal, toast } from '../ui.js';
 
 defineWidget({
   type: 'bookmarks',
@@ -21,10 +22,10 @@ defineWidget({
     { key: 'folderId', label: 'Dossier', type: 'folder' },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
-      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense']],
+      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
     },
     { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre du dossier'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
@@ -119,26 +120,29 @@ defineWidget({
       }
 
       const tiles = s.view === 'tiles';
+      const badges = s.view === 'badges';
       const wrap = el('div', {
-        class: tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
+        class: badges ? 'bm-badges' : tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
       });
       if (tiles) {
         wrap.style.setProperty('--tile', `${s.tile}px`);
         wrap.style.setProperty('--icon', `${s.icon}px`);
+      } else if (badges) {
+        wrap.style.setProperty('--icon', `${s.icon}px`);
       }
 
       for (const node of items) {
-        wrap.append(node.url ? linkNode(node, tiles) : folderNode(node, tiles));
+        wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
       }
       body.append(wrap);
     }
 
-    function iconFor(node, tiles) {
+    function iconFor(node, size) {
       if (!node.url) {
         return el('span', { class: 'glyph', text: '▸' });
       }
       const img = el('img', {
-        src: faviconUrl(node.url, tiles ? Math.max(32, s.icon * 2) : 32),
+        src: faviconUrl(node.url, size ? Math.max(32, s.icon * 2) : 32),
         alt: '', loading: 'lazy',
       });
       img.addEventListener('error', () => {
@@ -147,32 +151,61 @@ defineWidget({
       return img;
     }
 
-    function linkNode(node, tiles) {
+    /** Renomme localement un favori — n'écrit jamais dans les vrais favoris Chrome. */
+    function renameNode(node) {
+      const current = store.data.aliases[node.id] || '';
+      const input = el('input', { type: 'text', value: current, placeholder: node.title || hostOf(node.url) });
+      const body2 = el('div', { class: 'field' }, [
+        el('label', { text: 'Nom affiché (local à Atelier, le favori n\'est pas modifié)' }), input,
+      ]);
+      const commit = async (value) => {
+        await store.setAlias(node.id, value);
+        close();
+        render();
+        toast(value ? 'Nom mis à jour' : 'Nom réinitialisé');
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(input.value); });
+      const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+        current ? el('button', { class: 'btn', type: 'button', text: 'Réinitialiser', onclick: () => commit('') }) : null,
+        el('span', { style: { flex: '1' } }),
+        el('button', { class: 'btn btn-primary', type: 'button', text: 'Enregistrer', onclick: () => commit(input.value) }),
+      ]);
+      const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
+    }
+
+    function linkNode(node, tiles, badges) {
       // textContent partout : un titre de favori peut contenir du HTML.
-      const label = node.title || hostOf(node.url);
+      const alias = store.data.aliases[node.id];
+      const label = alias || node.title || hostOf(node.url);
       const a = el('a', {
-        class: tiles ? 'tile' : 'row',
+        class: badges ? 'badge' : tiles ? 'tile' : 'row',
         href: node.url,
         title: `${label}\n${node.url}`,
         onclick: (e) => openLink(node.url, s.openIn, e),
         onauxclick: (e) => openLink(node.url, s.openIn, e),
       });
-      a.append(iconFor(node, tiles));
-      a.append(el('span', { class: 'label', text: label }));
-      if (!tiles) a.append(el('span', { class: 'host', text: hostOf(node.url) }));
+      a.append(iconFor(node, tiles || badges));
+      if (!badges) {
+        a.append(el('span', { class: 'label', text: label }));
+        a.append(el('button', {
+          class: 'bm-rename', type: 'button', title: 'Renommer (local)', text: '✎',
+          onclick: (e) => { e.preventDefault(); e.stopPropagation(); renameNode(node); },
+        }));
+      }
+      if (!tiles && !badges) a.append(el('span', { class: 'host', text: hostOf(node.url) }));
       return a;
     }
 
-    function folderNode(node, tiles) {
+    function folderNode(node, tiles, badges) {
       const b = el('button', {
-        class: tiles ? 'tile' : 'row',
+        class: badges ? 'badge' : tiles ? 'tile' : 'row',
         type: 'button',
         title: node.title,
         style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
         onclick: () => { stack.push(node); render(); },
       });
       b.append(el('span', { class: 'glyph', text: '▸' }));
-      b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
+      if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
       return b;
     }
 
