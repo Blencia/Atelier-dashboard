@@ -53,6 +53,63 @@ async function renderField(f, values, set) {
     ]);
   }
 
+  if (f.type === 'folderList') {
+    folderCache ??= await listFolders();
+    const tabs = Array.isArray(val) ? val : (values[f.key] = []);
+    const list = el('div', { class: 'tablist-editor' });
+
+    const folderOptions = (selected) => {
+      const sel = el('select');
+      sel.append(el('option', { value: '', text: '— choisir un dossier —' }));
+      for (const folder of folderCache) {
+        sel.append(el('option', {
+          value: folder.id,
+          text: `${'  '.repeat(folder.depth)}${folder.title}`,
+          selected: String(folder.id) === String(selected),
+        }));
+      }
+      return sel;
+    };
+
+    const redraw = () => {
+      clear(list);
+      tabs.forEach((tab, i) => {
+        const sel = folderOptions(tab.folderId);
+        const nameInput = el('input', { type: 'text', placeholder: 'Nom de l\'onglet', value: tab.label || '' });
+        sel.addEventListener('change', () => {
+          const picked = folderCache.find((x) => x.id === sel.value);
+          tabs[i] = { ...tabs[i], folderId: sel.value || null, folderPath: picked?.path || '' };
+          set(f.key, tabs);
+        });
+        nameInput.addEventListener('change', () => {
+          tabs[i] = { ...tabs[i], label: nameInput.value };
+          set(f.key, tabs);
+        });
+        const removeBtn = el('button', {
+          class: 'btn btn-ghost btn-danger', type: 'button', text: '✕', title: 'Retirer cet onglet',
+          onclick: () => { tabs.splice(i, 1); set(f.key, tabs); redraw(); },
+        });
+        list.append(el('div', { class: 'tablist-row' }, [sel, nameInput, removeBtn]));
+      });
+      if (!tabs.length) list.append(el('p', { class: 'field-hint', text: 'Aucun onglet. Ajoutes-en un ci-dessous.' }));
+    };
+    redraw();
+
+    const addBtn = el('button', {
+      class: 'btn', type: 'button', text: '+ Ajouter un onglet',
+      onclick: () => {
+        tabs.push({ id: 't' + Math.random().toString(36).slice(2, 8), label: '', folderId: null, folderPath: '' });
+        set(f.key, tabs);
+        redraw();
+      },
+    });
+
+    return el('div', { class: 'field' }, [
+      el('label', { text: f.label }), list, addBtn,
+      f.hint ? el('p', { class: 'field-hint', text: f.hint }) : null,
+    ]);
+  }
+
   let control;
 
   if (f.type === 'select') {

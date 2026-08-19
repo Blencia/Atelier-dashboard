@@ -751,6 +751,37 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   word-break: break-all;
 }
 
+/* ---------- Éditeur d'onglets (réglages du module Dossier à onglets) ---------- */
+
+.tablist-editor { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.tablist-row { display: flex; align-items: center; gap: 6px; }
+.tablist-row select { flex: 1.3; min-width: 0; }
+.tablist-row input[type="text"] { flex: 1; min-width: 0; }
+.tablist-row select,
+.tablist-row input[type="text"] {
+  background: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
+  color: var(--graphite); font: inherit; font-size: 13px; padding: 7px 8px;
+}
+
+/* ---------- Contenu : dossier à onglets ---------- */
+
+.foldertabs-nav {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin-bottom: 8px;
+}
+.foldertabs-tab {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
+  color: var(--graphite-3);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+}
+.foldertabs-tab:hover { color: var(--graphite); }
+.foldertabs-tab.is-active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }

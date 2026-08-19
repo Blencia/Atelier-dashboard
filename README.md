@@ -83,7 +83,11 @@ js/registry.js         registre des types de modules
 js/ui.js               helpers DOM, favicons, arbre des favoris, modale
 js/settings.js         formulaires générés à partir d'un schéma
 js/app.js              thème, rendu, drag, resize, onglets, recherche, raccourcis
-js/widgets/bookmarks.js  dossier de favoris (tuiles/liste/pastilles), alias local
+js/bmview.js            navigateur de dossier partagé : tuiles/liste/pastilles,
+                        glisser entre modules, alias, clic droit — utilisé par
+                        Dossier de favoris et Dossier à onglets
+js/widgets/bookmarks.js    dossier de favoris (tuiles/liste/pastilles), alias local
+js/widgets/foldertabs.js   plusieurs dossiers dans un seul module, avec onglets
 js/widgets/misc.js       horloge (+ second fuseau), bloc-notes, sites fréquents, compte à rebours
 js/widgets/googletools.js  raccourcis vers les outils Google
 js/widgets/folder.js       dossier compact façon écran d'accueil, grille en modale

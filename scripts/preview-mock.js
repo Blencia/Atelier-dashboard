@@ -102,6 +102,17 @@
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
           { id: 'w8', type: 'folder', w: 2, h: 1, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients' } },
           { id: 'w9', type: 'countdown', w: 3, h: 1, settings: { label: 'Réveillon', target: '2026-12-24T18:00', doneText: 'Joyeux Noël !' } },
+          {
+            id: 'w13', type: 'foldertabs', w: 4, h: 3,
+            settings: {
+              active: 0, view: 'tiles', tile: 72, icon: 24, sort: 'manual', limit: 0, openIn: 'new',
+              tabs: [
+                { id: 't1', label: 'Dev', folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev' },
+                { id: 't2', label: 'Outils', folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils' },
+                { id: 't3', label: 'Veille IA', folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA' },
+              ],
+            },
+          },
         ],
       },
       {

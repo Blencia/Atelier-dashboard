@@ -7,14 +7,18 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 def flatten(rel):
     s = (ROOT / rel).read_text()
-    s = re.sub(r"^import .*?;\s*$", "", s, flags=re.M)
+    # re.S : les imports multi-lignes (accolade sur plusieurs lignes) doivent
+    # aussi être retirés — sans DOTALL, seule la première ligne matchait et le
+    # reste (ex. « } from '../ui.js'; ») restait, cassant l'aperçu en silence.
+    s = re.sub(r"^import .*?;\s*$", "", s, flags=re.M | re.S)
     s = re.sub(r"^export ", "", s, flags=re.M)
     return f"\n/* ==== {rel} ==== */\n" + s.strip() + "\n"
 
 ORDER = [
-    'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js',
+    'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js', 'js/bmview.js',
     'js/widgets/bookmarks.js', 'js/widgets/misc.js',
-    'js/widgets/googletools.js', 'js/widgets/folder.js', 'js/widgets/weather.js',
+    'js/widgets/googletools.js', 'js/widgets/folder.js', 'js/widgets/foldertabs.js',
+    'js/widgets/weather.js',
     'js/app.js',
 ]
 

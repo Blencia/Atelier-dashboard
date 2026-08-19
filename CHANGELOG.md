@@ -13,6 +13,19 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
   mode plan pour permettre ce glisser
 - Clic droit sur un favori : menu contextuel « Renommer le favori » /
   « Voir les détails » (titre, lien complet, date d'ajout, copier le lien)
+- Module « Dossier à onglets » : plusieurs dossiers de favoris regroupés
+  dans un seul module, avec des onglets pour basculer entre eux (même
+  glisser-déposer, alias local et clic droit que le module Dossier de favoris)
+
+### Corrigé
+- `docs/apercu.html` (aperçu GitHub Pages) : les imports JS écrits sur
+  plusieurs lignes n'étaient pas retirés à la génération, ce qui cassait la
+  page en silence (erreur de syntaxe). `scripts/build-preview.py` corrigé.
+
+### Modifié
+- La logique d'affichage d'un dossier de favoris (tuiles/liste/pastilles,
+  glisser, alias, clic droit) est factorisée dans `js/bmview.js`, réutilisée
+  par les modules Dossier de favoris et Dossier à onglets
 
 ## [1.0.0] — 2026-08-19
 

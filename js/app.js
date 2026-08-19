@@ -8,6 +8,7 @@ import './widgets/bookmarks.js';
 import './widgets/misc.js';
 import './widgets/googletools.js';
 import './widgets/folder.js';
+import './widgets/foldertabs.js';
 import './widgets/weather.js';
 
 const $ = (id) => document.getElementById(id);
