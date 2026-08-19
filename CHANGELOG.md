@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.0.0] — 2026-08-19
+
 ### Ajouté
 - Onglets : plusieurs dashboards indépendants, chacun avec ses modules et,
   en option, son propre thème/accent

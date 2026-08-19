@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Atelier — Tableau de bord",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Remplace le nouvel onglet par un tableau de bord modulable construit sur tes favoris.",
-  "permissions": ["bookmarks", "storage", "favicon", "topSites"],
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "favicon",
+    "topSites"
+  ],
   "host_permissions": [
     "https://api.open-meteo.com/*",
     "https://geocoding-api.open-meteo.com/*"
