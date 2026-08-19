@@ -92,24 +92,61 @@ export function mountFolderBrowser(body, opts) {
     body.append(wrap);
   }
 
+  /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
+  function nearestSibling(wrap, x, y) {
+    const nodes = [...wrap.children].filter((n) => n.dataset.bmId && !n.classList.contains('dragging-bm'));
+    let best = null;
+    let bestDist = Infinity;
+    for (const n of nodes) {
+      const r = n.getBoundingClientRect();
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+      if (d < bestDist) { bestDist = d; best = n; }
+    }
+    if (!best) return { el: null, before: false };
+    const r = best.getBoundingClientRect();
+    const sameRow = Math.abs(y - (r.top + r.height / 2)) < r.height / 2;
+    const before = sameRow ? x < r.left + r.width / 2 : y < r.top + r.height / 2;
+    return { el: best, before };
+  }
+
   function wireDrop(wrap, targetFolderId) {
+    let marked = null;
+    const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
+
     wrap.addEventListener('dragover', (e) => {
       if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       wrap.classList.add('bm-drop-target');
+      const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
+      if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
     wrap.addEventListener('dragleave', (e) => {
-      if (e.target === wrap) wrap.classList.remove('bm-drop-target');
+      if (e.target === wrap) { wrap.classList.remove('bm-drop-target'); unmark(); }
     });
     wrap.addEventListener('drop', async (e) => {
       wrap.classList.remove('bm-drop-target');
+      const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
+      unmark();
       if (!isEditing()) return;
       const bmId = e.dataTransfer.getData(DND_TYPE);
       if (!bmId) return;
       e.preventDefault();
+
+      const dest = { parentId: targetFolderId };
+      const refId = near?.dataset.bmId;
+      if (refId && refId !== bmId) {
+        try {
+          // Index dans la vraie liste (non triée à l'affichage) du dossier —
+          // Chrome ajuste lui-même le décalage si le favori vient du même dossier.
+          const raw = await chrome.bookmarks.getChildren(targetFolderId);
+          const refIdx = raw.findIndex((c) => c.id === refId);
+          if (refIdx !== -1) dest.index = before ? refIdx : refIdx + 1;
+        } catch { /* tant pis, on dépose à la fin */ }
+      }
+
       try {
-        await chrome.bookmarks.move(bmId, { parentId: targetFolderId });
+        await chrome.bookmarks.move(bmId, dest);
         toast('Favori déplacé');
       } catch {
         toast('Déplacement impossible — dossier invalide ?');
@@ -197,6 +234,7 @@ export function mountFolderBrowser(body, opts) {
       class: badges ? 'badge' : tiles ? 'tile' : 'row',
       href: node.url,
       title: `${label}\n${node.url}`,
+      'data-bm-id': node.id,
       draggable: 'true', // el() ne stringifie que `true` littéral en "" — 'draggable' exige la chaîne "true"
       onclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
       onauxclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
@@ -236,6 +274,7 @@ export function mountFolderBrowser(body, opts) {
       type: 'button',
       title: node.title,
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
+      'data-bm-id': node.id,
       draggable: 'true',
       onclick: () => { if (isEditing()) return; stack.push(node); render(); },
       ondragstart: (e) => {

@@ -134,7 +134,7 @@
   const persist = () => { try { localStorage.setItem('atelier-preview', JSON.stringify(mem)); } catch {} };
 
   window.chrome = {
-    runtime: { getURL: (p) => 'preview://' + p },
+    runtime: { getURL: (p) => 'preview://' + p, getManifest: () => ({ version: 'aperçu' }) },
     storage: {
       local: {
         async get(keys) {

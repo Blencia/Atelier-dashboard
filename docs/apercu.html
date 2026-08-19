@@ -180,6 +180,39 @@ body.is-editing .substrate { opacity: 1; }
 
 .tb-actions { gap: 6px; }
 
+.tb-meta {
+  display: flex; align-items: center; gap: 6px;
+  margin-right: 4px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
+  color: var(--graphite-3);
+  white-space: nowrap;
+}
+.tb-meta button {
+  background: none; border: 0; padding: 0;
+  color: var(--graphite-3); font: inherit; letter-spacing: inherit;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.tb-meta button:hover { color: var(--accent); }
+
+/* ---------- Journal des versions ---------- */
+
+.changelog-entry { margin-bottom: 20px; }
+.changelog-entry:last-child { margin-bottom: 0; }
+.changelog-version {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--font-mono); font-size: 13px; color: var(--accent);
+  font-weight: 600; margin-bottom: 8px;
+}
+.changelog-date { font-size: 10px; color: var(--graphite-3); font-weight: 400; }
+.changelog-section { margin-top: 10px; }
+.changelog-section:first-of-type { margin-top: 0; }
+.changelog-section-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--graphite-3); margin: 0 0 4px;
+}
+.changelog-entry ul { margin: 0; padding-left: 18px; }
+.changelog-entry li { font-size: 12.5px; color: var(--graphite); margin-bottom: 3px; }
+
 .omni-results {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   margin: 0; padding: 4px;
@@ -718,6 +751,8 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   outline-offset: 4px;
   border-radius: 6px;
 }
+/* Voisin le plus proche du pointeur pendant le glisser : là où ça va se poser. */
+.bm-insert-target { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
 
 /* ---------- Menu contextuel ---------- */
 
@@ -836,6 +871,10 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
     </div>
 
     <div class="tb-cell tb-actions">
+      <span class="tb-meta">
+        <span id="tbVersion">v…</span>
+        <button id="btnChangelog" type="button">Changelog</button>
+      </span>
       <button id="btnEdit" class="btn" type="button" title="Mode plan (E)">Mode plan</button>
       <button id="btnSettings" class="btn btn-icon" type="button" title="Réglages" aria-label="Réglages">
         <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 5.4A2.6 2.6 0 1 0 8 10.6 2.6 2.6 0 0 0 8 5.4zm0 1.3a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/><path fill="currentColor" d="m13.9 9.3-.9-.5a5.4 5.4 0 0 0 0-1.6l.9-.5a.6.6 0 0 0 .2-.8l-1-1.7a.6.6 0 0 0-.8-.2l-.9.5a5.2 5.2 0 0 0-1.4-.8V2.6a.6.6 0 0 0-.6-.6H7.6a.6.6 0 0 0-.6.6v1.1c-.5.2-1 .5-1.4.8l-.9-.5a.6.6 0 0 0-.8.2l-1 1.7a.6.6 0 0 0 .2.8l.9.5a5.4 5.4 0 0 0 0 1.6l-.9.5a.6.6 0 0 0-.2.8l1 1.7c.2.3.5.4.8.2l.9-.5c.4.3.9.6 1.4.8v1.1c0 .3.3.6.6.6h1.8c.3 0 .6-.3.6-.6v-1.1c.5-.2 1-.5 1.4-.8l.9.5c.3.2.6.1.8-.2l1-1.7a.6.6 0 0 0-.2-.8z"/></svg>
@@ -1005,7 +1044,7 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   const persist = () => { try { localStorage.setItem('atelier-preview', JSON.stringify(mem)); } catch {} };
 
   window.chrome = {
-    runtime: { getURL: (p) => 'preview://' + p },
+    runtime: { getURL: (p) => 'preview://' + p, getManifest: () => ({ version: 'aperçu' }) },
     storage: {
       local: {
         async get(keys) {
@@ -2035,6 +2074,85 @@ async function openSettings() {
   openModal({ title: 'Réglages', body });
 }
 
+/* ============================================================
+   Journal des versions (CHANGELOG.md, embarqué dans l'extension)
+   ============================================================ */
+
+/** Parseur minimal, taillé pour le format Keep a Changelog de CHANGELOG.md. */
+function parseChangelog(text) {
+  const entries = [];
+  let entry = null;
+  let section = null;
+
+  for (const raw of text.split('\n')) {
+    const line = raw.trimEnd();
+    const version = /^## \[([^\]]+)\](?:\s*—\s*(.+))?/.exec(line);
+    if (version) {
+      entry = { version: version[1], date: version[2] || '', sections: [] };
+      entries.push(entry);
+      section = null;
+      continue;
+    }
+    const heading = /^### (.+)/.exec(line);
+    if (heading && entry) {
+      section = { label: heading[1].trim(), items: [] };
+      entry.sections.push(section);
+      continue;
+    }
+    const item = /^-\s+(.+)/.exec(line);
+    if (item && entry) {
+      if (!section) { section = { label: '', items: [] }; entry.sections.push(section); }
+      section.items.push(item[1].trim());
+      continue;
+    }
+    if (/^\s+\S/.test(raw) && section?.items.length) {
+      // suite indentée d'un item sur plusieurs lignes
+      section.items[section.items.length - 1] += ' ' + line.trim();
+    }
+  }
+  return entries.filter((e) => e.sections.some((s) => s.items.length));
+}
+
+async function openChangelog() {
+  const body = el('div');
+  body.append(el('p', { class: 'note', text: 'Chargement…' }));
+  openModal({ title: 'Journal des versions', body });
+
+  let entries;
+  try {
+    const res = await fetch(chrome.runtime.getURL('CHANGELOG.md'));
+    if (!res.ok) throw new Error('fetch');
+    entries = parseChangelog(await res.text());
+  } catch {
+    clear(body);
+    body.append(el('p', { class: 'note', text: 'Journal indisponible.' }));
+    return;
+  }
+
+  clear(body);
+  if (!entries.length) {
+    body.append(el('p', { class: 'note', text: 'Aucune entrée pour l\'instant.' }));
+    return;
+  }
+  for (const entry of entries) {
+    const label = /^\d/.test(entry.version) ? `v${entry.version}` : entry.version;
+    const wrap = el('div', { class: 'changelog-entry' }, [
+      el('div', { class: 'changelog-version' }, [
+        label,
+        entry.date ? el('span', { class: 'changelog-date', text: entry.date }) : null,
+      ]),
+    ]);
+    for (const section of entry.sections) {
+      if (!section.items.length) continue;
+      wrap.append(el('div', { class: 'changelog-section' }, [
+        section.label ? el('p', { class: 'changelog-section-label', text: section.label }) : null,
+        el('ul', {}, section.items.map((item) => el('li', { text: item }))),
+      ]));
+    }
+    body.append(wrap);
+  }
+}
+
 function exportConfig() {
   const blob = new Blob([store.export()], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2155,24 +2273,61 @@ function mountFolderBrowser(body, opts) {
     body.append(wrap);
   }
 
+  /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
+  function nearestSibling(wrap, x, y) {
+    const nodes = [...wrap.children].filter((n) => n.dataset.bmId && !n.classList.contains('dragging-bm'));
+    let best = null;
+    let bestDist = Infinity;
+    for (const n of nodes) {
+      const r = n.getBoundingClientRect();
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+      if (d < bestDist) { bestDist = d; best = n; }
+    }
+    if (!best) return { el: null, before: false };
+    const r = best.getBoundingClientRect();
+    const sameRow = Math.abs(y - (r.top + r.height / 2)) < r.height / 2;
+    const before = sameRow ? x < r.left + r.width / 2 : y < r.top + r.height / 2;
+    return { el: best, before };
+  }
+
   function wireDrop(wrap, targetFolderId) {
+    let marked = null;
+    const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
+
     wrap.addEventListener('dragover', (e) => {
       if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       wrap.classList.add('bm-drop-target');
+      const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
+      if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
     wrap.addEventListener('dragleave', (e) => {
-      if (e.target === wrap) wrap.classList.remove('bm-drop-target');
+      if (e.target === wrap) { wrap.classList.remove('bm-drop-target'); unmark(); }
     });
     wrap.addEventListener('drop', async (e) => {
       wrap.classList.remove('bm-drop-target');
+      const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
+      unmark();
       if (!isEditing()) return;
       const bmId = e.dataTransfer.getData(DND_TYPE);
       if (!bmId) return;
       e.preventDefault();
+
+      const dest = { parentId: targetFolderId };
+      const refId = near?.dataset.bmId;
+      if (refId && refId !== bmId) {
+        try {
+          // Index dans la vraie liste (non triée à l'affichage) du dossier —
+          // Chrome ajuste lui-même le décalage si le favori vient du même dossier.
+          const raw = await chrome.bookmarks.getChildren(targetFolderId);
+          const refIdx = raw.findIndex((c) => c.id === refId);
+          if (refIdx !== -1) dest.index = before ? refIdx : refIdx + 1;
+        } catch { /* tant pis, on dépose à la fin */ }
+      }
+
       try {
-        await chrome.bookmarks.move(bmId, { parentId: targetFolderId });
+        await chrome.bookmarks.move(bmId, dest);
         toast('Favori déplacé');
       } catch {
         toast('Déplacement impossible — dossier invalide ?');
@@ -2260,6 +2415,7 @@ function mountFolderBrowser(body, opts) {
       class: badges ? 'badge' : tiles ? 'tile' : 'row',
       href: node.url,
       title: `${label}\n${node.url}`,
+      'data-bm-id': node.id,
       draggable: 'true', // el() ne stringifie que `true` littéral en "" — 'draggable' exige la chaîne "true"
       onclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
       onauxclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
@@ -2299,6 +2455,7 @@ function mountFolderBrowser(body, opts) {
       type: 'button',
       title: node.title,
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
+      'data-bm-id': node.id,
       draggable: 'true',
       onclick: () => { if (isEditing()) return; stack.push(node); render(); },
       ondragstart: (e) => {
@@ -3434,6 +3591,12 @@ omni.addEventListener('keydown', (e) => {
    ============================================================ */
 
 function startTitleBlock() {
+  try {
+    $('tbVersion').textContent = `v${chrome.runtime.getManifest().version}`;
+  } catch {
+    $('tbVersion').textContent = '';
+  }
+
   const timeFmt = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
   const dateFmt = new Intl.DateTimeFormat('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
   const tick = () => {
@@ -3519,6 +3682,7 @@ async function seed() {
   $('btnEdit').addEventListener('click', () => setEditing(!editing));
   $('btnDone').addEventListener('click', () => setEditing(false));
   $('btnSettings').addEventListener('click', openSettings);
+  $('btnChangelog').addEventListener('click', openChangelog);
   $('btnAdd').addEventListener('click', openAddWidget);
   $('emptyAdd').addEventListener('click', openAddWidget);
 

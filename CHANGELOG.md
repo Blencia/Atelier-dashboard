@@ -16,6 +16,12 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 - Module « Dossier à onglets » : plusieurs dossiers de favoris regroupés
   dans un seul module, avec des onglets pour basculer entre eux (même
   glisser-déposer, alias local et clic droit que le module Dossier de favoris)
+- Mode plan : le glisser d'un favori dépose maintenant précisément entre
+  deux éléments (indicateur visuel du voisin ciblé), pour réordonner un
+  dossier facilement — plus seulement le déplacer à la fin
+- Numéro de version + lien « Changelog » discrets dans la cartouche : ouvre
+  ce même journal des versions dans une fenêtre, sans quitter le tableau
+  de bord
 
 ### Corrigé
 - `docs/apercu.html` (aperçu GitHub Pages) : les imports JS écrits sur
@@ -26,6 +32,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 - La logique d'affichage d'un dossier de favoris (tuiles/liste/pastilles,
   glisser, alias, clic droit) est factorisée dans `js/bmview.js`, réutilisée
   par les modules Dossier de favoris et Dossier à onglets
+- `CHANGELOG.md` est maintenant embarqué dans le paquet (`scripts/build.sh`) :
+  c'est lui qui alimente la fenêtre Changelog, aucun doublon à maintenir
 
 ## [1.0.0] — 2026-08-19
 

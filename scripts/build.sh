@@ -56,6 +56,7 @@ rm -rf dist && mkdir -p dist
 zip -qr "$OUT" \
   manifest.json \
   newtab.html \
+  CHANGELOG.md \
   css \
   js \
   assets \

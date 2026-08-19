@@ -173,6 +173,39 @@ body.is-editing .substrate { opacity: 1; }
 
 .tb-actions { gap: 6px; }
 
+.tb-meta {
+  display: flex; align-items: center; gap: 6px;
+  margin-right: 4px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
+  color: var(--graphite-3);
+  white-space: nowrap;
+}
+.tb-meta button {
+  background: none; border: 0; padding: 0;
+  color: var(--graphite-3); font: inherit; letter-spacing: inherit;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.tb-meta button:hover { color: var(--accent); }
+
+/* ---------- Journal des versions ---------- */
+
+.changelog-entry { margin-bottom: 20px; }
+.changelog-entry:last-child { margin-bottom: 0; }
+.changelog-version {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--font-mono); font-size: 13px; color: var(--accent);
+  font-weight: 600; margin-bottom: 8px;
+}
+.changelog-date { font-size: 10px; color: var(--graphite-3); font-weight: 400; }
+.changelog-section { margin-top: 10px; }
+.changelog-section:first-of-type { margin-top: 0; }
+.changelog-section-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--graphite-3); margin: 0 0 4px;
+}
+.changelog-entry ul { margin: 0; padding-left: 18px; }
+.changelog-entry li { font-size: 12.5px; color: var(--graphite); margin-bottom: 3px; }
+
 .omni-results {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   margin: 0; padding: 4px;
@@ -711,6 +744,8 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   outline-offset: 4px;
   border-radius: 6px;
 }
+/* Voisin le plus proche du pointeur pendant le glisser : là où ça va se poser. */
+.bm-insert-target { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
 
 /* ---------- Menu contextuel ---------- */
 

@@ -1,7 +1,7 @@
 import { store, makeWidget, clamp } from './store.js';
 import { getWidget } from './registry.js';
 import { el, clear, faviconUrl, hostOf, initial, countBookmarks, debounce, toast } from './ui.js';
-import { openSettings, openWidgetSettings, openAddWidget, openAddBoard, openBoardSettings } from './settings.js';
+import { openSettings, openWidgetSettings, openAddWidget, openAddBoard, openBoardSettings, openChangelog } from './settings.js';
 
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
 import './widgets/bookmarks.js';
@@ -424,6 +424,12 @@ omni.addEventListener('keydown', (e) => {
    ============================================================ */
 
 function startTitleBlock() {
+  try {
+    $('tbVersion').textContent = `v${chrome.runtime.getManifest().version}`;
+  } catch {
+    $('tbVersion').textContent = '';
+  }
+
   const timeFmt = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
   const dateFmt = new Intl.DateTimeFormat('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
   const tick = () => {
@@ -509,6 +515,7 @@ async function seed() {
   $('btnEdit').addEventListener('click', () => setEditing(!editing));
   $('btnDone').addEventListener('click', () => setEditing(false));
   $('btnSettings').addEventListener('click', openSettings);
+  $('btnChangelog').addEventListener('click', openChangelog);
   $('btnAdd').addEventListener('click', openAddWidget);
   $('emptyAdd').addEventListener('click', openAddWidget);
 

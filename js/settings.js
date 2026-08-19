@@ -472,6 +472,85 @@ export async function openSettings() {
   openModal({ title: 'Réglages', body });
 }
 
+/* ============================================================
+   Journal des versions (CHANGELOG.md, embarqué dans l'extension)
+   ============================================================ */
+
+/** Parseur minimal, taillé pour le format Keep a Changelog de CHANGELOG.md. */
+function parseChangelog(text) {
+  const entries = [];
+  let entry = null;
+  let section = null;
+
+  for (const raw of text.split('\n')) {
+    const line = raw.trimEnd();
+    const version = /^## \[([^\]]+)\](?:\s*—\s*(.+))?/.exec(line);
+    if (version) {
+      entry = { version: version[1], date: version[2] || '', sections: [] };
+      entries.push(entry);
+      section = null;
+      continue;
+    }
+    const heading = /^### (.+)/.exec(line);
+    if (heading && entry) {
+      section = { label: heading[1].trim(), items: [] };
+      entry.sections.push(section);
+      continue;
+    }
+    const item = /^-\s+(.+)/.exec(line);
+    if (item && entry) {
+      if (!section) { section = { label: '', items: [] }; entry.sections.push(section); }
+      section.items.push(item[1].trim());
+      continue;
+    }
+    if (/^\s+\S/.test(raw) && section?.items.length) {
+      // suite indentée d'un item sur plusieurs lignes
+      section.items[section.items.length - 1] += ' ' + line.trim();
+    }
+  }
+  return entries.filter((e) => e.sections.some((s) => s.items.length));
+}
+
+export async function openChangelog() {
+  const body = el('div');
+  body.append(el('p', { class: 'note', text: 'Chargement…' }));
+  openModal({ title: 'Journal des versions', body });
+
+  let entries;
+  try {
+    const res = await fetch(chrome.runtime.getURL('CHANGELOG.md'));
+    if (!res.ok) throw new Error('fetch');
+    entries = parseChangelog(await res.text());
+  } catch {
+    clear(body);
+    body.append(el('p', { class: 'note', text: 'Journal indisponible.' }));
+    return;
+  }
+
+  clear(body);
+  if (!entries.length) {
+    body.append(el('p', { class: 'note', text: 'Aucune entrée pour l\'instant.' }));
+    return;
+  }
+  for (const entry of entries) {
+    const label = /^\d/.test(entry.version) ? `v${entry.version}` : entry.version;
+    const wrap = el('div', { class: 'changelog-entry' }, [
+      el('div', { class: 'changelog-version' }, [
+        label,
+        entry.date ? el('span', { class: 'changelog-date', text: entry.date }) : null,
+      ]),
+    ]);
+    for (const section of entry.sections) {
+      if (!section.items.length) continue;
+      wrap.append(el('div', { class: 'changelog-section' }, [
+        section.label ? el('p', { class: 'changelog-section-label', text: section.label }) : null,
+        el('ul', {}, section.items.map((item) => el('li', { text: item }))),
+      ]));
+    }
+    body.append(wrap);
+  }
+}
+
 function exportConfig() {
   const blob = new Blob([store.export()], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
