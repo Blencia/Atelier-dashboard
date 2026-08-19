@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.1.0] — 2026-08-19
+
 ### Ajouté
 - Mode plan : glisser un favori (ou un dossier) d'un module Dossier de
   favoris vers un autre pour le déplacer réellement entre dossiers
