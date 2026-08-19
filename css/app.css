@@ -563,6 +563,141 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
   font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em;
 }
 
+/* ---------- Onglets (dashboards) ---------- */
+
+.boards {
+  display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap;
+  max-width: var(--maxw);
+  margin: 12px auto 0;
+  padding: 0 2px;
+}
+.board-tab {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: .06em;
+  color: var(--graphite-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.board-tab:hover { color: var(--graphite); }
+.board-tab.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border-color: var(--rule);
+  border-bottom-color: transparent;
+}
+.board-tab-gear {
+  background: none; border: 0; padding: 0; margin: 0;
+  color: inherit; font-size: 10px; cursor: pointer; opacity: .7; line-height: 1;
+}
+.board-tab-gear:hover { opacity: 1; }
+.board-tab-add { font-size: 14px; padding: 7px 10px; }
+.board-tab-add:hover { color: var(--accent); }
+
+/* ---------- Saut clavier Alt+1..9 ---------- */
+
+@keyframes flash-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  35% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+.widget.flash { animation: flash-pulse 900ms var(--ease); border-color: var(--accent); }
+
+/* ---------- Contenu : pastilles + renommage local ---------- */
+
+.bm-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge {
+  display: grid; place-items: center;
+  width: calc(var(--icon, 26px) + 14px); height: calc(var(--icon, 26px) + 14px);
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  text-decoration: none; color: var(--graphite);
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.badge:hover, .badge:focus-visible { border-color: var(--accent); transform: translateY(-1px); }
+.badge img, .badge .glyph { width: var(--icon, 26px); height: var(--icon, 26px); border-radius: 50%; }
+.badge .glyph { display: grid; place-items: center; background: transparent; border: 0; }
+
+.tile { position: relative; }
+.bm-rename {
+  background: var(--panel-2); border: 1px solid var(--rule);
+  border-radius: 50%; width: 18px; height: 18px; padding: 0;
+  display: grid; place-items: center; flex: none;
+  color: var(--graphite-3); font-size: 9px; cursor: pointer;
+  opacity: 0; transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.bm-rename:hover { color: var(--accent); border-color: var(--accent); }
+.tile .bm-rename { position: absolute; top: 2px; right: 2px; }
+.tile:hover .bm-rename, .tile:focus-within .bm-rename { opacity: 1; }
+.row:hover .bm-rename, .row:focus-within .bm-rename { opacity: 1; }
+
+/* ---------- Contenu : horloge, second fuseau ---------- */
+
+.clock-tz2 {
+  margin-top: 4px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--graphite-3);
+}
+
+/* ---------- Contenu : compte à rebours ---------- */
+
+.countdown { display: grid; place-content: center; height: 100%; text-align: center; gap: 4px; }
+.countdown-big {
+  font-family: var(--font-mono);
+  font-size: clamp(20px, 3.4vw, 34px);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.countdown-sub {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--graphite-3);
+}
+
+/* ---------- Contenu : dossier façon iPhone ---------- */
+
+.folder-open {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: none; border: 0; cursor: pointer; color: var(--graphite); font: inherit;
+}
+.folder-preview {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
+  width: 44px; height: 44px;
+  padding: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+}
+.folder-preview img, .folder-preview .glyph { width: 100%; height: 100%; border-radius: 3px; }
+.folder-slot-empty { border-radius: 3px; background: color-mix(in srgb, var(--rule) 40%, transparent); }
+.folder-name {
+  font-size: 11px; color: var(--graphite-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+}
+.folder-grid .tile { padding: 10px 4px; }
+
+/* ---------- Contenu : météo ---------- */
+
+.weather { display: grid; place-content: center; height: 100%; text-align: center; gap: 2px; }
+.weather-icon { font-size: clamp(22px, 3.6vw, 34px); line-height: 1; }
+.weather-temp {
+  font-family: var(--font-mono); font-size: clamp(18px, 2.6vw, 26px);
+  font-variant-numeric: tabular-nums;
+}
+.weather-place {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .06em; color: var(--graphite-3);
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }

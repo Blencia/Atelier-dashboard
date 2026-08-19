@@ -99,10 +99,22 @@ plus visités selon Chrome. Utilisé uniquement quand l'utilisateur ajoute ce
 module à son tableau de bord.
 ```
 
+**`host_permissions` — api.open-meteo.com, geocoding-api.open-meteo.com**
+```
+Alimente le module optionnel « Météo » : géocodage du nom de ville saisi par
+l'utilisateur, puis lecture de la température et des conditions actuelles.
+Service gratuit, sans clé API, sans compte. Utilisé uniquement quand
+l'utilisateur ajoute ce module et saisit une ville — c'est la seule requête
+réseau de toute l'extension. Aucune autre donnée que le nom de la ville
+n'est transmise ; aucun favori, aucun historique, aucune donnée de
+navigation.
+```
+
 **Utilisation à distance du code**
 ```
 Aucune. Tout le JavaScript est empaqueté dans l'extension. Aucun script
-distant, aucun eval, aucun CDN.
+distant, aucun eval, aucun CDN. Le module Météo (optionnel) fait un appel
+réseau vers Open-Meteo pour récupérer des données météo — pas du code.
 ```
 
 **Objectif unique**
@@ -112,7 +124,11 @@ personnalisable.
 ```
 
 **Collecte de données** : cocher *ne collecte aucune donnée utilisateur*, et
-les trois attestations de conformité en bas du formulaire.
+les trois attestations de conformité en bas du formulaire. Nuance à ajouter
+dans le texte libre si le formulaire le permet : le module optionnel Météo
+transmet le nom de ville saisi à Open-Meteo (tiers) pour obtenir la
+prévision — rien n'est collecté ou stocké par Atelier au-delà des
+préférences locales de l'utilisateur.
 
 ## Après l'envoi
 

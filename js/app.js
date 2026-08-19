@@ -1,11 +1,14 @@
 import { store, makeWidget, clamp } from './store.js';
 import { getWidget } from './registry.js';
 import { el, clear, faviconUrl, hostOf, initial, countBookmarks, debounce, toast } from './ui.js';
-import { openSettings, openWidgetSettings, openAddWidget } from './settings.js';
+import { openSettings, openWidgetSettings, openAddWidget, openAddBoard, openBoardSettings } from './settings.js';
 
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
 import './widgets/bookmarks.js';
 import './widgets/misc.js';
+import './widgets/googletools.js';
+import './widgets/folder.js';
+import './widgets/weather.js';
 
 const $ = (id) => document.getElementById(id);
 const grid = $('grid');
@@ -18,7 +21,9 @@ let lastSig = '';
    ============================================================ */
 
 function applyTheme() {
-  const { theme: t, layout: l } = store.data;
+  const board = store.board();
+  const t = { ...store.data.theme, ...(board.theme || {}) };
+  const { layout: l } = store.data;
   const r = document.documentElement;
 
   r.dataset.mode = t.mode;
@@ -58,14 +63,44 @@ function contrastInk(hex) {
 }
 
 /* ============================================================
+   Onglets (dashboards)
+   ============================================================ */
+
+function renderBoards() {
+  const bar = $('boards');
+  clear(bar);
+  for (const b of store.data.boards) {
+    const active = b.id === store.data.activeBoard;
+    const tab = el('button', {
+      class: `board-tab${active ? ' is-active' : ''}`,
+      type: 'button',
+      onclick: () => store.setActiveBoard(b.id),
+    }, [el('span', { class: 'board-tab-name', text: b.name })]);
+    if (active) {
+      tab.append(el('button', {
+        class: 'board-tab-gear', type: 'button', title: 'Réglages de l\'onglet',
+        onclick: (e) => { e.stopPropagation(); openBoardSettings(b.id); },
+        text: '⚙',
+      }));
+    }
+    bar.append(tab);
+  }
+  bar.append(el('button', {
+    class: 'board-tab board-tab-add', type: 'button', title: 'Nouvel onglet', text: '+',
+    onclick: openAddBoard,
+  }));
+}
+
+/* ============================================================
    Rendu de la feuille
    ============================================================ */
 
 function sig() {
-  return JSON.stringify(store.data.widgets);
+  return store.data.activeBoard + '|' + JSON.stringify(store.board().widgets);
 }
 
 function render() {
+  renderBoards();
   applyTheme();
   const s = sig();
   if (s === lastSig) return;   // changement de thème seul : pas de remontage
@@ -78,7 +113,7 @@ function rebuild() {
   mounted.clear();
   clear(grid);
 
-  const list = store.data.widgets;
+  const list = store.board().widgets;
   $('empty').hidden = list.length > 0;
 
   list.forEach((w, i) => {
@@ -249,6 +284,29 @@ function setEditing(on) {
    Recherche
    ============================================================ */
 
+/* Préfixes de recherche : "yt: chats" saute direct sur YouTube. */
+const SEARCH_PREFIXES = [
+  ['g:', 'Google', 'https://www.google.com/search?q=%s'],
+  ['yt:', 'YouTube', 'https://www.youtube.com/results?search_query=%s'],
+  ['gh:', 'GitHub', 'https://github.com/search?q=%s'],
+  ['wiki:', 'Wikipédia', 'https://fr.wikipedia.org/w/index.php?search=%s'],
+  ['maps:', 'Maps', 'https://www.google.com/maps/search/%s'],
+  ['img:', 'Images', 'https://www.google.com/search?tbm=isch&q=%s'],
+  ['ddg:', 'DuckDuckGo', 'https://duckduckgo.com/?q=%s'],
+];
+
+function matchPrefix(q) {
+  const trimmed = q.trimStart();
+  const low = trimmed.toLowerCase();
+  for (const [prefix, label, tpl] of SEARCH_PREFIXES) {
+    if (low.startsWith(prefix)) {
+      const rest = trimmed.slice(prefix.length).trim();
+      return { label, rest, url: tpl.replace('%s', encodeURIComponent(rest)) };
+    }
+  }
+  return null;
+}
+
 const omni = $('omni');
 const results = $('omniResults');
 let hits = [];
@@ -256,6 +314,13 @@ let cursor = -1;
 
 const search = debounce(async (q) => {
   if (!q.trim()) return hideResults();
+  const prefixed = matchPrefix(q);
+  if (prefixed) {
+    hits = [];
+    cursor = -1;
+    drawPrefixResult(prefixed);
+    return;
+  }
   let found = [];
   try {
     found = await chrome.bookmarks.search({ query: q });
@@ -264,6 +329,21 @@ const search = debounce(async (q) => {
   cursor = hits.length ? 0 : -1;
   drawResults(q);
 }, 90);
+
+function drawPrefixResult(p) {
+  clear(results);
+  results.hidden = false;
+  results.append(el('li', {
+    class: 'omni-item', role: 'option', 'aria-selected': 'true',
+    onclick: (e) => go(p.url, e),
+  }, [
+    el('span', { class: 'glyph', text: '↵' }),
+    el('span', {
+      class: 'omni-title',
+      text: p.rest ? `Rechercher « ${p.rest} » sur ${p.label}` : `Rechercher sur ${p.label}`,
+    }),
+  ]));
+}
 
 function drawResults(q) {
   clear(results);
@@ -325,6 +405,8 @@ omni.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowUp' && hits.length) { e.preventDefault(); cursor = (cursor - 1 + hits.length) % hits.length; syncSelection(); }
   else if (e.key === 'Enter') {
     e.preventDefault();
+    const prefixed = matchPrefix(omni.value);
+    if (prefixed) { go(prefixed.url, e); return; }
     const pick = hits[cursor];
     if (pick) go(pick.url, e);
     else if (omni.value.trim()) {
@@ -375,6 +457,16 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '/') { e.preventDefault(); omni.focus(); }
   else if (e.key === 'e' || e.key === 'E') { setEditing(!editing); }
   else if (e.key === 'Escape' && editing) { setEditing(false); }
+  else if (e.altKey && /^[1-9]$/.test(e.key)) {
+    // Alt+1..9 : saute au module correspondant à sa position sur la feuille active.
+    const node = grid.children[+e.key - 1];
+    if (node) {
+      e.preventDefault();
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.classList.add('flash');
+      setTimeout(() => node.classList.remove('flash'), 900);
+    }
+  }
 });
 
 /* ============================================================
@@ -386,7 +478,7 @@ async function seed() {
   const roots = tree[0]?.children || [];
   const bar = roots.find((n) => !n.url) || roots[0];
 
-  store.data.widgets = [
+  store.board().widgets = [
     makeWidget('bookmarks', {
       folderId: bar?.id ?? null,
       folderPath: bar?.title || '',
@@ -404,7 +496,7 @@ async function seed() {
 
 (async function boot() {
   await store.load();
-  if (!store.data.widgets.length) {
+  if (!store.board().widgets.length) {
     try { await seed(); } catch { /* pas de favoris : feuille vide */ }
   }
 

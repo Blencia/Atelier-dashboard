@@ -47,27 +47,47 @@ Rien ne sort de la machine : aucune requête réseau, aucun compte.
 | Geste | Effet |
 |---|---|
 | `/` ou `Ctrl/Cmd + K` | Recherche dans les favoris |
+| `Alt + 1`…`9` | Saute au module à cette position sur la feuille active |
 | `E` | Bascule le **mode plan** |
 | `Échap` | Sort du mode plan |
 | Glisser l'en-tête d'un module | Le déplacer |
 | Tirer le coin bas-droit | Le redimensionner |
 | ⚙ dans l'en-tête | Réglages du module |
+| ✎ au survol d'un favori | Renomme l'affichage localement (le favori Chrome n'est pas touché) |
 
 En mode plan, la feuille révèle le papier millimétré, la règle de colonnes et les
 dimensions de chaque module (`4×2` = 4 colonnes sur 2 rangées).
+
+### Recherche par préfixe
+
+Tape `g:`, `yt:`, `gh:`, `wiki:`, `maps:`, `img:` ou `ddg:` suivi de ta requête
+pour sauter direct sur ce moteur (ex. `yt: chats` ouvre YouTube), sans passer
+par la recherche de favoris.
+
+### Onglets
+
+Plusieurs feuilles indépendantes (ex. « Principal », « Streaming »), chacune
+avec ses propres modules et, si tu veux, son propre thème/accent. Barre
+d'onglets sous la cartouche : `+` pour en créer un, ⚙ sur l'onglet actif pour
+le renommer, personnaliser son thème, ou le supprimer (le dernier onglet
+restant ne peut pas être supprimé).
 
 ## Architecture
 
 ```
 manifest.json          MV3, override du newtab
-newtab.html            structure : cartouche + feuille
+newtab.html            structure : cartouche + onglets + feuille
 css/app.css            tout le thème via variables CSS
-js/store.js            config dans chrome.storage.local + pubsub
+js/store.js            config dans chrome.storage.local + pubsub, plusieurs dashboards
 js/registry.js         registre des types de modules
 js/ui.js               helpers DOM, favicons, arbre des favoris, modale
 js/settings.js         formulaires générés à partir d'un schéma
-js/app.js              thème, rendu, drag, resize, recherche, raccourcis
-js/widgets/*.js        les modules
+js/app.js              thème, rendu, drag, resize, onglets, recherche, raccourcis
+js/widgets/bookmarks.js  dossier de favoris (tuiles/liste/pastilles), alias local
+js/widgets/misc.js       horloge (+ second fuseau), bloc-notes, sites fréquents, compte à rebours
+js/widgets/googletools.js  raccourcis vers les outils Google
+js/widgets/folder.js       dossier compact façon écran d'accueil, grille en modale
+js/widgets/weather.js      météo (Open-Meteo, seul module avec appel réseau)
 ```
 
 ## Ajouter un module
