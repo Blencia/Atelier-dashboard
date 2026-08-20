@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.5.0] — 2026-08-20
+
 ### Ajouté
 - Les modules Dossier de favoris, Dossier à onglets et Dossier n'exigent
   plus d'assigner un vrai dossier Chrome : laisse le champ « Dossier »
