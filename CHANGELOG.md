@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.4.0] — 2026-08-20
+
 ### Corrigé
 - Module Dossier (aperçu compact) : n'acceptait aucun favori glissé depuis
   un autre module — seuls Dossier de favoris et Dossier à onglets géraient
