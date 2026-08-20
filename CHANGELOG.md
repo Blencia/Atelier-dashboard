@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.3.0] — 2026-08-20
+
 ### Corrigé
 - Mode plan : glisser un favori vers un **autre** module ne fonctionnait pas
   si ce module était plus grand que son contenu (zone de dépôt limitée aux
