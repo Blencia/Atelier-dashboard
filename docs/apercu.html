@@ -847,6 +847,56 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
 .foldertabs-tab:hover { color: var(--graphite); }
 .foldertabs-tab.is-active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
+/* ---------- Panneau latéral : tous les favoris (mode plan) ---------- */
+
+.side-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 35;
+  width: 280px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  padding: 16px 14px;
+  background: var(--panel-2);
+  border-left: 1px solid var(--rule);
+  box-shadow: -18px 0 40px rgb(0 0 0 / .35);
+  animation: rise 200ms var(--ease);
+}
+.sp-head { display: flex; flex-direction: column; gap: 2px; }
+.sp-title {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent); font-weight: 600;
+}
+.sp-hint { font-size: 11px; color: var(--graphite-3); }
+.sp-search {
+  background: var(--ink); border: 1px solid var(--rule); border-radius: 5px;
+  color: var(--graphite); font: inherit; font-size: 13px; padding: 8px 10px;
+}
+.sp-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+  scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+}
+.sp-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 5px; cursor: grab;
+  transition: background var(--dur) var(--ease);
+}
+.sp-row:hover { background: var(--panel); }
+.sp-row img, .sp-row .glyph { width: 18px; height: 18px; flex: none; border-radius: 4px; }
+.sp-row .glyph {
+  display: grid; place-items: center;
+  background: var(--ink); border: 1px solid var(--rule);
+  color: var(--accent); font-size: 9px; font-family: var(--font-mono);
+}
+.sp-row-text { min-width: 0; display: flex; flex-direction: column; }
+.sp-row-title {
+  font-size: 12.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp-row-path {
+  font-family: var(--font-mono); font-size: 10px; color: var(--graphite-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }
@@ -857,6 +907,7 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   .sheet, .ruler { padding-inline: 12px; }
   .widget { grid-column: 1 / -1; }
   .dock-hint { display: none; }
+  .side-panel { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1537,6 +1588,26 @@ async function findFolderByPath(path) {
   if (!path) return null;
   const folders = await listFolders();
   return folders.find((f) => f.path === path) || null;
+}
+
+/** Liste plate de TOUS les favoris (liens, pas les dossiers), avec le chemin
+    de leur dossier réel — utilisé par le panneau « Tous les favoris » en
+    mode plan. */
+async function listAllBookmarks() {
+  const tree = await chrome.bookmarks.getTree();
+  const out = [];
+  const walk = (node, path) => {
+    for (const child of node.children || []) {
+      if (child.url) {
+        out.push({ id: child.id, title: child.title, url: child.url, path });
+      } else {
+        const label = child.title || '(sans nom)';
+        walk(child, path ? `${path} / ${label}` : label);
+      }
+    }
+  };
+  walk(tree[0], '');
+  return out;
 }
 
 async function countBookmarks() {
@@ -2292,6 +2363,10 @@ function downscale(file, maxW, quality) {
    module) sont des surcouches locales, stockées à part. Un favori supprimé
    ou renommé dans Chrome se reflète toujours immédiatement ici. */
 
+/* Type de dataTransfer utilisé par TOUT glisser de favori dans Atelier —
+   exporté pour que les modules qui n'utilisent pas mountFolderBrowser
+   (ex. le module Dossier compact) puissent quand même être une cible de
+   dépôt valide, avec le même protocole. */
 const DND_TYPE = 'application/x-atelier-bookmark-id';
 
 /* store.setFolderOrder/setFolderOverride sauvegardent en silencieux (pas de
@@ -2318,6 +2393,34 @@ chrome.bookmarks.onRemoved.addListener((id) => {
   if (changed) store.save({ silent: true });
 });
 
+/** Classe virtuellement `nodeId` sous `targetFolderId` (jamais un vrai
+    chrome.bookmarks.move) et renvoie le nœud Chrome à jour, ou null s'il
+    n'existe plus. Partagé par mountFolderBrowser et les modules simples
+    (ex. Dossier compact) qui n'ont pas de liste où positionner précisément. */
+async function setDisplayFolder(nodeId, targetFolderId) {
+  let node;
+  try { [node] = await chrome.bookmarks.get(nodeId); } catch { return null; }
+  const displayFolder = store.data.folderOverride[nodeId] || node.parentId;
+  if (displayFolder !== targetFolderId) {
+    await store.setFolderOverride(nodeId, targetFolderId === node.parentId ? null : targetFolderId);
+  }
+  return node;
+}
+
+/** Variante simple de dropInto, pour les modules sans liste déroulée où
+    positionner précisément (ex. l'aperçu compact du module Dossier) —
+    classe le favori/dossier à la fin de `targetFolderId`. */
+async function classifyIntoFolder(nodeId, targetFolderId) {
+  const node = await setDisplayFolder(nodeId, targetFolderId);
+  if (!node) return false;
+  const order = store.data.folderOrder[targetFolderId] || [];
+  if (!order.includes(nodeId)) {
+    await store.setFolderOrder(targetFolderId, [...order, nodeId]);
+  }
+  refreshAllBrowsers();
+  return true;
+}
+
 /**
  * @param {HTMLElement} body      conteneur à remplir (vidé et rempli à chaque rendu)
  * @param {object} opts
@@ -2331,6 +2434,11 @@ function mountFolderBrowser(body, opts) {
   let stack = [];   // navigation interne, remise à zéro par resetStack()
   let alive = true;
   body.classList.add('bm-dnd');
+  // Cible courante du dépôt, mise à jour à chaque render() — wireDrop() est
+  // câblé UNE SEULE FOIS sur `body` (élément stable) ; le re-câbler à chaque
+  // rendu empilerait des écouteurs en double sur le même élément persistant.
+  let currentWrap = null;
+  let currentTargetFolderId = null;
 
   /** Enfants réellement affichés dans `folderId` : ceux de Chrome, moins ceux
       classés virtuellement ailleurs, plus ceux classés virtuellement ici. */
@@ -2409,7 +2517,8 @@ function mountFolderBrowser(body, opts) {
 
     if (!items.length) {
       body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
-      wireDrop(body, body, currentId); // pas de tuiles, mais on peut quand même y déposer un favori
+      currentWrap = body; // pas de tuiles, mais on peut quand même y déposer un favori
+      currentTargetFolderId = currentId;
       return;
     }
 
@@ -2430,10 +2539,8 @@ function mountFolderBrowser(body, opts) {
       wrap.append(node.url ? linkNode(node, tiles, badges, iconsOnly) : folderNode(node, tiles, badges, iconsOnly));
     }
     body.append(wrap);
-    // Sur `body` (toute la hauteur du module), pas juste `wrap` (taille du
-    // contenu) : sinon lâcher dans l'espace vide autour des tuiles ne
-    // déclenchait rien quand le module est plus grand que son contenu.
-    wireDrop(body, wrap, currentId);
+    currentWrap = wrap;
+    currentTargetFolderId = currentId;
   }
 
   /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
@@ -2456,13 +2563,8 @@ function mountFolderBrowser(body, opts) {
   /** Classe virtuellement `bmId` dans `targetFolderId`, à la position visuelle
       demandée — jamais un chrome.bookmarks.move. Le vrai favori ne bouge pas. */
   async function dropInto(wrap, targetFolderId, bmId, refId, before) {
-    let node;
-    try { [node] = await chrome.bookmarks.get(bmId); } catch { return false; }
-
-    const displayFolder = store.data.folderOverride[bmId] || node.parentId;
-    if (displayFolder !== targetFolderId) {
-      await store.setFolderOverride(bmId, targetFolderId === node.parentId ? null : targetFolderId);
-    }
+    const node = await setDisplayFolder(bmId, targetFolderId);
+    if (!node) return false;
 
     // Ordre local : la séquence actuellement affichée dans ce module, avec
     // bmId inséré au bon endroit.
@@ -2484,33 +2586,36 @@ function mountFolderBrowser(body, opts) {
     return true;
   }
 
-  /** `target` reçoit les écouteurs (toute la hauteur du module, pas juste le
-      contenu) ; `wrap` sert uniquement à calculer le voisin le plus proche. */
-  function wireDrop(target, wrap, targetFolderId) {
+  /** Câblé UNE SEULE FOIS sur `body` (élément stable pendant toute la vie du
+      module) — lit `currentWrap`/`currentTargetFolderId`, mis à jour par
+      chaque render(), plutôt que d'être re-câblé (et donc dupliqué) à
+      chaque rendu. `body` reçoit les écouteurs pour couvrir tout le module,
+      pas juste la grille de tuiles. */
+  function wireDrop() {
     let marked = null;
     const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
 
-    target.addEventListener('dragover', (e) => {
-      if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+    body.addEventListener('dragover', (e) => {
+      if (!isEditing() || !currentTargetFolderId || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      target.classList.add('bm-drop-target');
-      const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
+      body.classList.add('bm-drop-target');
+      const { el: near } = nearestSibling(currentWrap, e.clientX, e.clientY);
       if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
-    target.addEventListener('dragleave', (e) => {
-      if (e.target === target) { target.classList.remove('bm-drop-target'); unmark(); }
+    body.addEventListener('dragleave', (e) => {
+      if (e.target === body) { body.classList.remove('bm-drop-target'); unmark(); }
     });
-    target.addEventListener('drop', async (e) => {
-      target.classList.remove('bm-drop-target');
-      const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
+    body.addEventListener('drop', async (e) => {
+      body.classList.remove('bm-drop-target');
+      const { el: near, before } = nearestSibling(currentWrap, e.clientX, e.clientY);
       unmark();
-      if (!isEditing()) return;
+      if (!isEditing() || !currentTargetFolderId) return;
       const bmId = e.dataTransfer.getData(DND_TYPE);
       if (!bmId) return;
       e.preventDefault();
 
-      const ok = await dropInto(wrap, targetFolderId, bmId, near?.dataset.bmId, before);
+      const ok = await dropInto(currentWrap, currentTargetFolderId, bmId, near?.dataset.bmId, before);
       if (ok) {
         toast('Classé ici — les vrais favoris Chrome ne sont pas touchés');
         refreshAllBrowsers();
@@ -2680,6 +2785,7 @@ function mountFolderBrowser(body, opts) {
   chrome.bookmarks.onMoved.addListener(refresh);
   liveBrowsers.add(render);
 
+  wireDrop();
   render();
 
   return {
@@ -2694,6 +2800,98 @@ function mountFolderBrowser(body, opts) {
       chrome.bookmarks.onMoved.removeListener(refresh);
     },
   };
+}
+
+/* ==== js/sidepanel.js ==== */
+/* Panneau latéral, visible seulement en mode plan : liste tous les favoris
+   pour qu'on puisse en glisser un directement vers un module Dossier de
+   favoris / Dossier à onglets / Dossier — même protocole de glisser
+   (DND_TYPE) que les modules eux-mêmes, aucune logique de dépôt en plus à
+   écrire ici. */
+
+let all = [];
+let panel, list, searchInput;
+let listening = false;
+
+function row(bm) {
+  const label = bm.title || hostOf(bm.url);
+  const r = el('div', {
+    class: 'sp-row',
+    title: `${label}\n${bm.url}${bm.path ? `\n${bm.path}` : ''}`,
+    draggable: 'true',
+    ondragstart: (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData(DND_TYPE, bm.id);
+      r.classList.add('dragging-bm');
+    },
+    ondragend: () => r.classList.remove('dragging-bm'),
+  });
+  const img = el('img', { src: faviconUrl(bm.url, 28), alt: '', loading: 'lazy' });
+  img.addEventListener('error', () => {
+    img.replaceWith(el('span', { class: 'glyph', text: initial(bm.title, bm.url) }));
+  });
+  r.append(img, el('div', { class: 'sp-row-text' }, [
+    el('span', { class: 'sp-row-title', text: label }),
+    el('span', { class: 'sp-row-path', text: bm.path || '—' }),
+  ]));
+  return r;
+}
+
+function renderList() {
+  const q = searchInput.value.trim().toLowerCase();
+  clear(list);
+  const filtered = q
+    ? all.filter((bm) => `${bm.title} ${bm.url} ${bm.path}`.toLowerCase().includes(q))
+    : all;
+  if (!filtered.length) {
+    list.append(el('p', { class: 'note', text: 'Aucun favori.' }));
+    return;
+  }
+  for (const bm of filtered) list.append(row(bm));
+}
+
+async function refresh() {
+  try { all = await listAllBookmarks(); } catch { all = []; }
+  renderList();
+}
+
+function ensurePanel() {
+  if (panel) return;
+  searchInput = el('input', { type: 'text', placeholder: 'Filtrer les favoris…', class: 'sp-search' });
+  searchInput.addEventListener('input', debounce(renderList, 80));
+  list = el('div', { class: 'sp-list' });
+  panel = el('aside', { class: 'side-panel', id: 'sidePanel' }, [
+    el('div', { class: 'sp-head' }, [
+      el('span', { class: 'sp-title', text: 'Tous les favoris' }),
+      el('span', { class: 'sp-hint', text: 'Glisse vers un module dossier' }),
+    ]),
+    searchInput,
+    list,
+  ]);
+  document.body.append(panel);
+}
+
+function showSidePanel() {
+  ensurePanel();
+  panel.hidden = false;
+  if (!listening) {
+    listening = true;
+    for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
+      chrome.bookmarks[ev].addListener(refresh);
+    }
+  }
+  refresh();
+}
+
+function hideSidePanel() {
+  if (!panel) return;
+  panel.hidden = true;
+  if (listening) {
+    listening = false;
+    for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
+      chrome.bookmarks[ev].removeListener(refresh);
+    }
+  }
 }
 
 /* ==== js/widgets/bookmarks.js ==== */
@@ -3051,6 +3249,8 @@ defineWidget({
   mount(body, ctx) {
     const s = ctx.settings;
     let alive = true;
+    let currentRootId = null; // mis à jour par render(), lu par wireDrop() câblé une seule fois
+    body.classList.add('bm-dnd'); // reste interactif en mode plan pour accepter un glisser
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -3083,6 +3283,7 @@ defineWidget({
       clear(body);
 
       const rootId = await resolveRoot();
+      currentRootId = rootId;
       if (!rootId) {
         body.append(el('p', { class: 'note', text: 'Aucun dossier choisi. Ouvre les réglages du module.' }));
         return;
@@ -3098,10 +3299,36 @@ defineWidget({
 
       body.append(el('button', {
         class: 'folder-open', type: 'button', title: name,
-        onclick: () => openFolderModal(rootId, name),
+        onclick: () => { if (!isEditing()) openFolderModal(rootId, name); },
       }, [preview, el('span', { class: 'folder-name', text: name })]));
     }
 
+    /** Câblé une seule fois sur `body` (élément stable) — accepte un
+        favori/dossier glissé depuis un autre module et le classe
+        virtuellement ici (jamais un vrai chrome.bookmarks.move). */
+    function wireDrop() {
+      body.addEventListener('dragover', (e) => {
+        if (!isEditing() || !currentRootId || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        body.classList.add('bm-drop-target');
+      });
+      body.addEventListener('dragleave', (e) => {
+        if (e.target === body) body.classList.remove('bm-drop-target');
+      });
+      body.addEventListener('drop', async (e) => {
+        body.classList.remove('bm-drop-target');
+        if (!isEditing() || !currentRootId) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId) return;
+        e.preventDefault();
+        const ok = await classifyIntoFolder(bmId, currentRootId);
+        toast(ok ? 'Classé ici — les vrais favoris Chrome ne sont pas touchés' : 'Déplacement impossible');
+        if (ok) render();
+      });
+    }
+
+    wireDrop();
     render();
     const refresh = () => render();
     for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
@@ -3658,6 +3885,7 @@ function setEditing(on) {
   $('dock').hidden = !on;
   $('btnEdit').setAttribute('aria-pressed', String(on));
   if (!on) grid.querySelectorAll('.widget').forEach((n) => { n.draggable = false; });
+  if (on) showSidePanel(); else hideSidePanel();
 }
 
 /* ============================================================

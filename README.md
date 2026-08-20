@@ -56,8 +56,11 @@ Rien ne sort de la machine : aucune requête réseau, aucun compte.
 | ✎ au survol d'un favori | Renomme l'affichage localement (le favori Chrome n'est pas touché) |
 | Glisser un favori vers un autre module | Le classe virtuellement là (voir « Organisation locale » plus bas) |
 
-En mode plan, la feuille révèle le papier millimétré, la règle de colonnes et les
-dimensions de chaque module (`4×2` = 4 colonnes sur 2 rangées).
+En mode plan, la feuille révèle le papier millimétré, la règle de colonnes, les
+dimensions de chaque module (`4×2` = 4 colonnes sur 2 rangées), et un panneau
+latéral listant tous tes favoris (filtrable) — pratique pour en glisser un
+directement vers un module Dossier de favoris / Dossier à onglets / Dossier,
+sans avoir à le retrouver dans le module qui l'affiche déjà.
 
 ### Recherche par préfixe
 
@@ -84,9 +87,10 @@ js/registry.js         registre des types de modules
 js/ui.js               helpers DOM, favicons, arbre des favoris, modale
 js/settings.js         formulaires générés à partir d'un schéma
 js/app.js              thème, rendu, drag, resize, onglets, recherche, raccourcis
-js/bmview.js            navigateur de dossier partagé : tuiles/liste/pastilles,
+js/bmview.js            navigateur de dossier partagé : tuiles/liste/icônes/pastilles,
                         glisser entre modules, alias, clic droit — utilisé par
                         Dossier de favoris et Dossier à onglets
+js/sidepanel.js         panneau latéral « Tous les favoris », visible en mode plan
 js/widgets/bookmarks.js    dossier de favoris (tuiles/liste/pastilles), alias local
 js/widgets/foldertabs.js   plusieurs dossiers dans un seul module, avec onglets
 js/widgets/misc.js       horloge (+ second fuseau), bloc-notes, sites fréquents, compte à rebours

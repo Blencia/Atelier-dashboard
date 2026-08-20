@@ -6,6 +6,23 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Corrigé
+- Module Dossier (aperçu compact) : n'acceptait aucun favori glissé depuis
+  un autre module — seuls Dossier de favoris et Dossier à onglets géraient
+  le dépôt. Corrigé, même protocole que les autres.
+- Bug plus profond trouvé en corrigeant ce qui précède : la zone de dépôt
+  était re-câblée (dupliquée) à chaque rafraîchissement du module au lieu
+  d'être câblée une seule fois. Après plusieurs rafraîchissements, un dépôt
+  pouvait viser un dossier obsolète. Corrigé dans bmview.js et folder.js.
+
+### Ajouté
+- Panneau latéral « Tous les favoris », visible en mode plan : liste (avec
+  filtre) l'ensemble de tes favoris, avec leur chemin de dossier réel.
+  Glisse n'importe quelle ligne vers un module Dossier de favoris / Dossier
+  à onglets / Dossier pour la classer là — même mécanisme de classement
+  virtuel que le glisser entre modules (rien n'est écrit dans tes vrais
+  favoris Chrome).
+
 ## [1.3.0] — 2026-08-20
 
 ### Corrigé

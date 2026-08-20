@@ -1,5 +1,6 @@
 import { defineWidget } from '../registry.js';
-import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal } from '../ui.js';
+import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal, isEditing, toast } from '../ui.js';
+import { DND_TYPE, classifyIntoFolder } from '../bmview.js';
 
 /* Petit widget « dossier » façon écran d'accueil de téléphone : un aperçu
    réduit sur la feuille, qui s'ouvre en grille plein écran au clic. */
@@ -22,6 +23,8 @@ defineWidget({
   mount(body, ctx) {
     const s = ctx.settings;
     let alive = true;
+    let currentRootId = null; // mis à jour par render(), lu par wireDrop() câblé une seule fois
+    body.classList.add('bm-dnd'); // reste interactif en mode plan pour accepter un glisser
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -54,6 +57,7 @@ defineWidget({
       clear(body);
 
       const rootId = await resolveRoot();
+      currentRootId = rootId;
       if (!rootId) {
         body.append(el('p', { class: 'note', text: 'Aucun dossier choisi. Ouvre les réglages du module.' }));
         return;
@@ -69,10 +73,36 @@ defineWidget({
 
       body.append(el('button', {
         class: 'folder-open', type: 'button', title: name,
-        onclick: () => openFolderModal(rootId, name),
+        onclick: () => { if (!isEditing()) openFolderModal(rootId, name); },
       }, [preview, el('span', { class: 'folder-name', text: name })]));
     }
 
+    /** Câblé une seule fois sur `body` (élément stable) — accepte un
+        favori/dossier glissé depuis un autre module et le classe
+        virtuellement ici (jamais un vrai chrome.bookmarks.move). */
+    function wireDrop() {
+      body.addEventListener('dragover', (e) => {
+        if (!isEditing() || !currentRootId || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        body.classList.add('bm-drop-target');
+      });
+      body.addEventListener('dragleave', (e) => {
+        if (e.target === body) body.classList.remove('bm-drop-target');
+      });
+      body.addEventListener('drop', async (e) => {
+        body.classList.remove('bm-drop-target');
+        if (!isEditing() || !currentRootId) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId) return;
+        e.preventDefault();
+        const ok = await classifyIntoFolder(bmId, currentRootId);
+        toast(ok ? 'Classé ici — les vrais favoris Chrome ne sont pas touchés' : 'Déplacement impossible');
+        if (ok) render();
+      });
+    }
+
+    wireDrop();
     render();
     const refresh = () => render();
     for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {

@@ -2,6 +2,7 @@ import { store, makeWidget, clamp } from './store.js';
 import { getWidget } from './registry.js';
 import { el, clear, faviconUrl, hostOf, initial, countBookmarks, debounce, toast } from './ui.js';
 import { openSettings, openWidgetSettings, openAddWidget, openAddBoard, openBoardSettings, openChangelog } from './settings.js';
+import { showSidePanel, hideSidePanel } from './sidepanel.js';
 
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
 import './widgets/bookmarks.js';
@@ -280,6 +281,7 @@ function setEditing(on) {
   $('dock').hidden = !on;
   $('btnEdit').setAttribute('aria-pressed', String(on));
   if (!on) grid.querySelectorAll('.widget').forEach((n) => { n.draggable = false; });
+  if (on) showSidePanel(); else hideSidePanel();
 }
 
 /* ============================================================

@@ -840,6 +840,56 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
 .foldertabs-tab:hover { color: var(--graphite); }
 .foldertabs-tab.is-active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
+/* ---------- Panneau latéral : tous les favoris (mode plan) ---------- */
+
+.side-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 35;
+  width: 280px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  padding: 16px 14px;
+  background: var(--panel-2);
+  border-left: 1px solid var(--rule);
+  box-shadow: -18px 0 40px rgb(0 0 0 / .35);
+  animation: rise 200ms var(--ease);
+}
+.sp-head { display: flex; flex-direction: column; gap: 2px; }
+.sp-title {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent); font-weight: 600;
+}
+.sp-hint { font-size: 11px; color: var(--graphite-3); }
+.sp-search {
+  background: var(--ink); border: 1px solid var(--rule); border-radius: 5px;
+  color: var(--graphite); font: inherit; font-size: 13px; padding: 8px 10px;
+}
+.sp-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+  scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+}
+.sp-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 5px; cursor: grab;
+  transition: background var(--dur) var(--ease);
+}
+.sp-row:hover { background: var(--panel); }
+.sp-row img, .sp-row .glyph { width: 18px; height: 18px; flex: none; border-radius: 4px; }
+.sp-row .glyph {
+  display: grid; place-items: center;
+  background: var(--ink); border: 1px solid var(--rule);
+  color: var(--accent); font-size: 9px; font-family: var(--font-mono);
+}
+.sp-row-text { min-width: 0; display: flex; flex-direction: column; }
+.sp-row-title {
+  font-size: 12.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp-row-path {
+  font-family: var(--font-mono); font-size: 10px; color: var(--graphite-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) { :root { --cols: 8; } }
@@ -850,6 +900,7 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   .sheet, .ruler { padding-inline: 12px; }
   .widget { grid-column: 1 / -1; }
   .dock-hint { display: none; }
+  .side-panel { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,7 +15,7 @@ def flatten(rel):
     return f"\n/* ==== {rel} ==== */\n" + s.strip() + "\n"
 
 ORDER = [
-    'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js', 'js/bmview.js',
+    'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js', 'js/bmview.js', 'js/sidepanel.js',
     'js/widgets/bookmarks.js', 'js/widgets/misc.js',
     'js/widgets/googletools.js', 'js/widgets/folder.js', 'js/widgets/foldertabs.js',
     'js/widgets/weather.js',

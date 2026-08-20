@@ -82,6 +82,26 @@ export async function findFolderByPath(path) {
   return folders.find((f) => f.path === path) || null;
 }
 
+/** Liste plate de TOUS les favoris (liens, pas les dossiers), avec le chemin
+    de leur dossier réel — utilisé par le panneau « Tous les favoris » en
+    mode plan. */
+export async function listAllBookmarks() {
+  const tree = await chrome.bookmarks.getTree();
+  const out = [];
+  const walk = (node, path) => {
+    for (const child of node.children || []) {
+      if (child.url) {
+        out.push({ id: child.id, title: child.title, url: child.url, path });
+      } else {
+        const label = child.title || '(sans nom)';
+        walk(child, path ? `${path} / ${label}` : label);
+      }
+    }
+  };
+  walk(tree[0], '');
+  return out;
+}
+
 export async function countBookmarks() {
   const tree = await chrome.bookmarks.getTree();
   let n = 0;

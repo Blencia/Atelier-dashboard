@@ -17,7 +17,11 @@ import {
    module) sont des surcouches locales, stockées à part. Un favori supprimé
    ou renommé dans Chrome se reflète toujours immédiatement ici. */
 
-const DND_TYPE = 'application/x-atelier-bookmark-id';
+/* Type de dataTransfer utilisé par TOUT glisser de favori dans Atelier —
+   exporté pour que les modules qui n'utilisent pas mountFolderBrowser
+   (ex. le module Dossier compact) puissent quand même être une cible de
+   dépôt valide, avec le même protocole. */
+export const DND_TYPE = 'application/x-atelier-bookmark-id';
 
 /* store.setFolderOrder/setFolderOverride sauvegardent en silencieux (pas de
    rebuild global de app.js, et de toute façon folderOrder/folderOverride ne
@@ -25,7 +29,7 @@ const DND_TYPE = 'application/x-atelier-bookmark-id';
    glisser un favori dans UN module ne rafraîchirait pas les autres modules
    qui affichent le même dossier réel. */
 const liveBrowsers = new Set();
-function refreshAllBrowsers() {
+export function refreshAllBrowsers() {
   for (const render of liveBrowsers) render();
 }
 
@@ -43,6 +47,34 @@ chrome.bookmarks.onRemoved.addListener((id) => {
   if (changed) store.save({ silent: true });
 });
 
+/** Classe virtuellement `nodeId` sous `targetFolderId` (jamais un vrai
+    chrome.bookmarks.move) et renvoie le nœud Chrome à jour, ou null s'il
+    n'existe plus. Partagé par mountFolderBrowser et les modules simples
+    (ex. Dossier compact) qui n'ont pas de liste où positionner précisément. */
+export async function setDisplayFolder(nodeId, targetFolderId) {
+  let node;
+  try { [node] = await chrome.bookmarks.get(nodeId); } catch { return null; }
+  const displayFolder = store.data.folderOverride[nodeId] || node.parentId;
+  if (displayFolder !== targetFolderId) {
+    await store.setFolderOverride(nodeId, targetFolderId === node.parentId ? null : targetFolderId);
+  }
+  return node;
+}
+
+/** Variante simple de dropInto, pour les modules sans liste déroulée où
+    positionner précisément (ex. l'aperçu compact du module Dossier) —
+    classe le favori/dossier à la fin de `targetFolderId`. */
+export async function classifyIntoFolder(nodeId, targetFolderId) {
+  const node = await setDisplayFolder(nodeId, targetFolderId);
+  if (!node) return false;
+  const order = store.data.folderOrder[targetFolderId] || [];
+  if (!order.includes(nodeId)) {
+    await store.setFolderOrder(targetFolderId, [...order, nodeId]);
+  }
+  refreshAllBrowsers();
+  return true;
+}
+
 /**
  * @param {HTMLElement} body      conteneur à remplir (vidé et rempli à chaque rendu)
  * @param {object} opts
@@ -56,6 +88,11 @@ export function mountFolderBrowser(body, opts) {
   let stack = [];   // navigation interne, remise à zéro par resetStack()
   let alive = true;
   body.classList.add('bm-dnd');
+  // Cible courante du dépôt, mise à jour à chaque render() — wireDrop() est
+  // câblé UNE SEULE FOIS sur `body` (élément stable) ; le re-câbler à chaque
+  // rendu empilerait des écouteurs en double sur le même élément persistant.
+  let currentWrap = null;
+  let currentTargetFolderId = null;
 
   /** Enfants réellement affichés dans `folderId` : ceux de Chrome, moins ceux
       classés virtuellement ailleurs, plus ceux classés virtuellement ici. */
@@ -134,7 +171,8 @@ export function mountFolderBrowser(body, opts) {
 
     if (!items.length) {
       body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
-      wireDrop(body, body, currentId); // pas de tuiles, mais on peut quand même y déposer un favori
+      currentWrap = body; // pas de tuiles, mais on peut quand même y déposer un favori
+      currentTargetFolderId = currentId;
       return;
     }
 
@@ -155,10 +193,8 @@ export function mountFolderBrowser(body, opts) {
       wrap.append(node.url ? linkNode(node, tiles, badges, iconsOnly) : folderNode(node, tiles, badges, iconsOnly));
     }
     body.append(wrap);
-    // Sur `body` (toute la hauteur du module), pas juste `wrap` (taille du
-    // contenu) : sinon lâcher dans l'espace vide autour des tuiles ne
-    // déclenchait rien quand le module est plus grand que son contenu.
-    wireDrop(body, wrap, currentId);
+    currentWrap = wrap;
+    currentTargetFolderId = currentId;
   }
 
   /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
@@ -181,13 +217,8 @@ export function mountFolderBrowser(body, opts) {
   /** Classe virtuellement `bmId` dans `targetFolderId`, à la position visuelle
       demandée — jamais un chrome.bookmarks.move. Le vrai favori ne bouge pas. */
   async function dropInto(wrap, targetFolderId, bmId, refId, before) {
-    let node;
-    try { [node] = await chrome.bookmarks.get(bmId); } catch { return false; }
-
-    const displayFolder = store.data.folderOverride[bmId] || node.parentId;
-    if (displayFolder !== targetFolderId) {
-      await store.setFolderOverride(bmId, targetFolderId === node.parentId ? null : targetFolderId);
-    }
+    const node = await setDisplayFolder(bmId, targetFolderId);
+    if (!node) return false;
 
     // Ordre local : la séquence actuellement affichée dans ce module, avec
     // bmId inséré au bon endroit.
@@ -209,33 +240,36 @@ export function mountFolderBrowser(body, opts) {
     return true;
   }
 
-  /** `target` reçoit les écouteurs (toute la hauteur du module, pas juste le
-      contenu) ; `wrap` sert uniquement à calculer le voisin le plus proche. */
-  function wireDrop(target, wrap, targetFolderId) {
+  /** Câblé UNE SEULE FOIS sur `body` (élément stable pendant toute la vie du
+      module) — lit `currentWrap`/`currentTargetFolderId`, mis à jour par
+      chaque render(), plutôt que d'être re-câblé (et donc dupliqué) à
+      chaque rendu. `body` reçoit les écouteurs pour couvrir tout le module,
+      pas juste la grille de tuiles. */
+  function wireDrop() {
     let marked = null;
     const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
 
-    target.addEventListener('dragover', (e) => {
-      if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+    body.addEventListener('dragover', (e) => {
+      if (!isEditing() || !currentTargetFolderId || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      target.classList.add('bm-drop-target');
-      const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
+      body.classList.add('bm-drop-target');
+      const { el: near } = nearestSibling(currentWrap, e.clientX, e.clientY);
       if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
-    target.addEventListener('dragleave', (e) => {
-      if (e.target === target) { target.classList.remove('bm-drop-target'); unmark(); }
+    body.addEventListener('dragleave', (e) => {
+      if (e.target === body) { body.classList.remove('bm-drop-target'); unmark(); }
     });
-    target.addEventListener('drop', async (e) => {
-      target.classList.remove('bm-drop-target');
-      const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
+    body.addEventListener('drop', async (e) => {
+      body.classList.remove('bm-drop-target');
+      const { el: near, before } = nearestSibling(currentWrap, e.clientX, e.clientY);
       unmark();
-      if (!isEditing()) return;
+      if (!isEditing() || !currentTargetFolderId) return;
       const bmId = e.dataTransfer.getData(DND_TYPE);
       if (!bmId) return;
       e.preventDefault();
 
-      const ok = await dropInto(wrap, targetFolderId, bmId, near?.dataset.bmId, before);
+      const ok = await dropInto(currentWrap, currentTargetFolderId, bmId, near?.dataset.bmId, before);
       if (ok) {
         toast('Classé ici — les vrais favoris Chrome ne sont pas touchés');
         refreshAllBrowsers();
@@ -405,6 +439,7 @@ export function mountFolderBrowser(body, opts) {
   chrome.bookmarks.onMoved.addListener(refresh);
   liveBrowsers.add(render);
 
+  wireDrop();
   render();
 
   return {
