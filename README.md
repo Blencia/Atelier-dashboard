@@ -59,8 +59,8 @@ Rien ne sort de la machine : aucune requête réseau, aucun compte.
 En mode plan, la feuille révèle le papier millimétré, la règle de colonnes, les
 dimensions de chaque module (`4×2` = 4 colonnes sur 2 rangées), et un panneau
 latéral listant tous tes favoris (filtrable) — pratique pour en glisser un
-directement vers un module Dossier de favoris / Dossier à onglets / Dossier,
-sans avoir à le retrouver dans le module qui l'affiche déjà.
+directement vers un module Dossier / Dossier à onglets, sans avoir à le
+retrouver dans le module qui l'affiche déjà.
 
 ### Recherche par préfixe
 
@@ -88,14 +88,15 @@ js/ui.js               helpers DOM, favicons, arbre des favoris, modale
 js/settings.js         formulaires générés à partir d'un schéma
 js/app.js              thème, rendu, drag, resize, onglets, recherche, raccourcis
 js/bmview.js            navigateur de dossier partagé : tuiles/liste/icônes/pastilles,
+                        icône compacte + grille en modale, sous-dossiers virtuels,
                         glisser entre modules, alias, clic droit — utilisé par
-                        Dossier de favoris et Dossier à onglets
+                        Dossier et Dossier à onglets
 js/sidepanel.js         panneau latéral « Tous les favoris », visible en mode plan
-js/widgets/bookmarks.js    dossier de favoris (tuiles/liste/pastilles), alias local
+js/widgets/folder.js       dossier de favoris — tuiles/liste/icônes/pastilles ou
+                        icône compacte façon écran d'accueil, grille en modale
 js/widgets/foldertabs.js   plusieurs dossiers dans un seul module, avec onglets
 js/widgets/misc.js       horloge (+ second fuseau), bloc-notes, sites fréquents, compte à rebours
 js/widgets/googletools.js  raccourcis vers les outils Google
-js/widgets/folder.js       dossier compact façon écran d'accueil, grille en modale
 js/widgets/weather.js      météo (Open-Meteo, seul module avec appel réseau)
 ```
 
@@ -164,14 +165,23 @@ Chrome non plus.
 
 ### Dossiers virtuels
 
-Le champ « Dossier » des modules Dossier de favoris / Dossier à onglets /
-Dossier est optionnel. Laisse-le vide et le module devient un **dossier
-virtuel** — un bac vide identifié localement (`atelier:<id-du-module>`, une
-clé qui n'existe dans aucune vraie donnée Chrome), que tu remplis en y
-glissant des favoris depuis le panneau latéral ou un autre module. Aucun
-dossier Chrome n'est créé ni requis. Si tu supprimes un module qui contient
-des favoris classés virtuellement, ils redeviennent visibles sous leur
-dossier réel ailleurs dans Atelier plutôt que de disparaître.
+Le champ « Dossier » des modules Dossier / Dossier à onglets est optionnel.
+Laisse-le vide et le module devient un **dossier virtuel** — un bac vide
+identifié localement (`atelier:<id-du-module>`, une clé qui n'existe dans
+aucune vraie donnée Chrome), que tu remplis en y glissant des favoris
+depuis le panneau latéral ou un autre module. Aucun dossier Chrome n'est
+créé ni requis. Si tu supprimes un module qui contient des favoris classés
+virtuellement, ils redeviennent visibles sous leur dossier réel ailleurs
+dans Atelier plutôt que de disparaître.
+
+Dans n'importe quel dossier (réel ou virtuel), le clic droit sur un espace
+vide propose **+ Nouveau sous-dossier** : un sous-dossier fait main, avec
+son propre style façon dossier d'écran d'accueil de téléphone, disponible
+en mode tuiles/liste comme en mode Icône compacte. Se renomme et se
+supprime via son propre clic droit ; le supprimer libère les favoris qu'il
+contenait plutôt que de les faire disparaître. Comme le reste de
+l'organisation locale, ces sous-dossiers n'existent que dans Atelier —
+jamais créés dans tes vrais favoris Chrome.
 
 ## Sauvegarde
 

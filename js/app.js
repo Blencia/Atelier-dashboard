@@ -5,7 +5,6 @@ import { openSettings, openWidgetSettings, openAddWidget, openAddBoard, openBoar
 import { showSidePanel, hideSidePanel } from './sidepanel.js';
 
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
-import './widgets/bookmarks.js';
 import './widgets/misc.js';
 import './widgets/googletools.js';
 import './widgets/folder.js';
@@ -489,7 +488,7 @@ async function seed() {
   const bar = roots.find((n) => !n.url) || roots[0];
 
   store.board().widgets = [
-    makeWidget('bookmarks', {
+    makeWidget('folder', {
       folderId: bar?.id ?? null,
       folderPath: bar?.title || '',
       view: 'tiles',

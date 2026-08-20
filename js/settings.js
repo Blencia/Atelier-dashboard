@@ -1,5 +1,5 @@
 import { store, makeWidget, clamp } from './store.js';
-import { allWidgets, getWidget } from './registry.js';
+import { visibleWidgets, getWidget } from './registry.js';
 import { el, clear, openModal, toast, listFolders } from './ui.js';
 import { releaseVirtualFolder } from './bmview.js';
 
@@ -371,7 +371,7 @@ export async function openBoardSettings(boardId) {
 
 export function openAddWidget() {
   const grid = el('div', { class: 'picker' });
-  for (const def of allWidgets()) {
+  for (const def of visibleWidgets()) {
     grid.append(el('button', {
       type: 'button',
       onclick: async () => {

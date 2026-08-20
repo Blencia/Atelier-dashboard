@@ -4,10 +4,11 @@ import {
   openModal, toast, isEditing, openContextMenu,
 } from './ui.js';
 
-/* Navigateur de dossier de favoris réutilisable : tuiles/liste/pastilles,
-   sous-dossiers, glisser vers un autre module, alias local, menu clic droit
-   (renommer/détails). Utilisé par les modules Dossier de favoris et Dossier
-   à onglets — voir js/widgets/bookmarks.js et js/widgets/foldertabs.js.
+/* Navigateur de dossier de favoris réutilisable : tuiles/liste/icônes seules/
+   pastilles/icône compacte, sous-dossiers (réels ou créés à la main),
+   glisser vers un autre module, alias local, menu clic droit
+   (renommer/détails). Utilisé par les modules Dossier et Dossier à onglets
+   — voir js/widgets/folder.js et js/widgets/foldertabs.js.
 
    IMPORTANT — organisation virtuelle : Atelier NE modifie JAMAIS tes vrais
    favoris Chrome (ni leur ordre, ni leur dossier). Le contenu (existence,
@@ -60,6 +61,17 @@ function isVirtualFolder(id) {
     seulement utilisé comme clé dans folderOrder/folderOverride. */
 export function virtualFolderId(widgetId, tabId) {
   return tabId ? `atelier:${widgetId}:${tabId}` : `atelier:${widgetId}`;
+}
+
+/** Id d'un sous-dossier créé à la main (clic droit → Nouveau sous-dossier) —
+    même préfixe "atelier:" donc déjà traité comme virtuel partout, mais un
+    sous-préfixe "vf:" distinct pour le repérer (renommer/supprimer). */
+function newVirtualSubfolderId() {
+  return `atelier:vf:${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isVirtualSubfolder(id) {
+  return typeof id === 'string' && id.startsWith('atelier:vf:');
 }
 
 /** À appeler quand un module (ou un de ses onglets) est supprimé pour de bon :
@@ -132,6 +144,12 @@ export async function resolveDisplayedChildren(folderId) {
       if (node && node.parentId !== folderId) items.push(node);
     } catch { /* favori supprimé entretemps : classement caduc, ignoré */ }
   }
+
+  // Sous-dossiers créés à la main (clic droit → Nouveau sous-dossier) : de
+  // simples nœuds locaux, jamais dans chrome.bookmarks.
+  for (const [vfId, vf] of Object.entries(store.data.virtualFolders)) {
+    if (vf.parent === folderId) items.push({ id: vfId, title: vf.name, parentId: folderId });
+  }
   return items;
 }
 
@@ -161,6 +179,13 @@ export function mountFolderBrowser(body, opts) {
     const rootId = await resolveRoot();
     if (!rootId) {
       body.append(el('p', { class: 'note', text: 'Aucun dossier choisi. Ouvre les réglages du module.' }));
+      currentWrap = null;
+      currentTargetFolderId = null;
+      return;
+    }
+
+    if (s.view === 'app') {
+      await renderAppView(rootId);
       return;
     }
 
@@ -242,6 +267,98 @@ export function mountFolderBrowser(body, opts) {
     body.append(wrap);
     currentWrap = wrap;
     currentTargetFolderId = currentId;
+  }
+
+  /** Vue « Icône compacte » : aperçu réduit façon écran d'accueil de
+      téléphone, tout le contenu vit dans une fenêtre ouverte au clic. */
+  async function renderAppView(rootId) {
+    let children;
+    try {
+      children = await resolveDisplayedChildren(rootId);
+    } catch {
+      body.append(el('p', { class: 'note', text: 'Lecture du dossier impossible.' }));
+      currentWrap = null;
+      currentTargetFolderId = null;
+      return;
+    }
+
+    const name = s.label || s.folderPath?.split(' / ').pop() || 'Dossier';
+    const preview = el('div', { class: 'folder-preview' });
+    children.slice(0, 4).forEach((n) => preview.append(n.url ? appThumb(n) : el('span', { class: 'glyph', text: '📁' })));
+    for (let i = children.length; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+
+    body.append(el('button', {
+      class: 'folder-open', type: 'button', title: name,
+      onclick: () => { if (!isEditing()) openAppModal(rootId, name); },
+    }, [preview, el('span', { class: 'folder-name', text: name })]));
+
+    // Pas de tuiles avec data-bm-id ici : nearestSibling ne trouvera rien,
+    // un dépôt s'ajoute donc toujours à la fin — comportement voulu.
+    currentWrap = body;
+    currentTargetFolderId = rootId;
+  }
+
+  function appThumb(node) {
+    const img = el('img', { src: faviconUrl(node.url, 32), alt: '', loading: 'lazy' });
+    img.addEventListener('error', () => {
+      img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
+    });
+    return img;
+  }
+
+  /** Grille plein écran, façon écran d'accueil, avec sa propre navigation
+      dans les sous-dossiers — réutilise linkNode/folderNode : même
+      glisser-sortant, alias, clic droit que la vue inline. */
+  function openAppModal(rootId, title) {
+    let modalStack = [];
+    let modalCurrentId = rootId;
+    const grid = el('div', { class: 'folder-grid' });
+    grid.style.setProperty('--icon', `${s.icon}px`);
+    const crumbs = el('nav', { class: 'bm-crumbs' });
+
+    grid.addEventListener('contextmenu', (e) => {
+      if (e.target !== grid) return; // clic sur un item : son propre menu s'en charge
+      e.preventDefault();
+      openContextMenu(e.clientX, e.clientY, [
+        { label: '+ Nouveau sous-dossier', onClick: () => createSubfolder(modalCurrentId) },
+      ]);
+    });
+
+    async function draw() {
+      clear(grid);
+      clear(crumbs);
+      modalCurrentId = modalStack.length ? modalStack[modalStack.length - 1].id : rootId;
+      let children;
+      try { children = await resolveDisplayedChildren(modalCurrentId); } catch { children = []; }
+
+      if (modalStack.length) {
+        crumbs.append(el('button', { type: 'button', text: '← racine', onclick: () => { modalStack = []; draw(); } }));
+        modalStack.forEach((node, i) => {
+          crumbs.append(el('span', { text: '/' }));
+          crumbs.append(el('button', {
+            type: 'button', text: node.title || '(sans nom)',
+            onclick: () => { modalStack = modalStack.slice(0, i + 1); draw(); },
+          }));
+        });
+      }
+
+      for (const node of children) {
+        grid.append(node.url
+          ? linkNode(node, true, false, false)
+          : folderNode(node, true, false, false, (n) => { modalStack.push(n); draw(); }));
+      }
+      if (!children.length) {
+        grid.append(el('p', {
+          class: 'note',
+          text: isVirtualFolder(modalCurrentId) && !modalStack.length
+            ? 'Dossier virtuel, vide pour l\'instant — glisse un favori depuis le panneau latéral (mode plan) ou un autre module pour le classer ici.'
+            : 'Dossier vide.',
+        }));
+      }
+    }
+
+    draw();
+    openModal({ title, body: el('div', {}, [crumbs, grid]) });
   }
 
   /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
@@ -326,6 +443,21 @@ export function mountFolderBrowser(body, opts) {
     });
   }
 
+  /** Câblé une seule fois sur `body`, comme wireDrop() — clic droit sur
+      l'espace vide (pas sur un item, qui a déjà son propre menu) propose
+      de créer un sous-dossier virtuel, façon écran d'accueil de téléphone. */
+  function wireContextMenu() {
+    body.addEventListener('contextmenu', (e) => {
+      if (!currentTargetFolderId) return;
+      const onEmptySpace = e.target === currentWrap || (currentWrap === body && e.target === body);
+      if (!onEmptySpace) return;
+      e.preventDefault();
+      openContextMenu(e.clientX, e.clientY, [
+        { label: '+ Nouveau sous-dossier', onClick: () => createSubfolder(currentTargetFolderId) },
+      ]);
+    });
+  }
+
   function iconFor(node, size) {
     if (!node.url) return el('span', { class: 'glyph', text: '▸' });
     const img = el('img', {
@@ -338,26 +470,29 @@ export function mountFolderBrowser(body, opts) {
     return img;
   }
 
-  /** Renomme localement un favori — n'écrit jamais dans les vrais favoris Chrome. */
+  /** Renomme localement un favori (alias) ou un sous-dossier virtuel (son
+      seul nom) — n'écrit jamais dans les vrais favoris Chrome. */
   function renameNode(node) {
-    const current = store.data.aliases[node.id] || '';
+    const virtualSub = isVirtualSubfolder(node.id);
+    const current = virtualSub ? node.title : (store.data.aliases[node.id] || '');
     const input = el('input', { type: 'text', value: current, placeholder: node.title || hostOf(node.url) });
     const body2 = el('div', { class: 'field' }, [
-      el('label', { text: 'Nom affiché (local à Atelier, le favori n\'est pas modifié)' }), input,
+      el('label', { text: virtualSub ? 'Nom du sous-dossier' : 'Nom affiché (local à Atelier, le favori n\'est pas modifié)' }), input,
     ]);
     const commit = async (value) => {
-      await store.setAlias(node.id, value);
+      if (virtualSub) await store.renameVirtualFolder(node.id, value || 'Sans nom');
+      else await store.setAlias(node.id, value);
       close();
-      render();
-      toast(value ? 'Nom mis à jour' : 'Nom réinitialisé');
+      refreshAllBrowsers();
+      toast('Nom mis à jour');
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(input.value); });
     const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
-      current ? el('button', { class: 'btn', type: 'button', text: 'Réinitialiser', onclick: () => commit('') }) : null,
+      !virtualSub && current ? el('button', { class: 'btn', type: 'button', text: 'Réinitialiser', onclick: () => commit('') }) : null,
       el('span', { style: { flex: '1' } }),
       el('button', { class: 'btn btn-primary', type: 'button', text: 'Enregistrer', onclick: () => commit(input.value) }),
     ]);
-    const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
+    const close = openModal({ title: virtualSub ? 'Renommer ce sous-dossier' : 'Renommer ce favori', body: body2, footer });
   }
 
   /** Retire un favori/dossier de son classement virtuel — il redevient
@@ -366,6 +501,34 @@ export function mountFolderBrowser(body, opts) {
     await store.setFolderOverride(node.id, null);
     refreshAllBrowsers();
     toast('Remis à sa place réelle dans Chrome');
+  }
+
+  /** Supprime un sous-dossier créé à la main. Les favoris qui y étaient
+      classés sont libérés (pas perdus) plutôt que de devenir invisibles. */
+  async function deleteSubfolder(node) {
+    if (!confirm(`Supprimer le sous-dossier « ${node.title} » ? Son contenu ne sera pas supprimé, seulement libéré.`)) return;
+    await releaseVirtualFolder(node.id);
+    await store.removeVirtualFolder(node.id);
+    refreshAllBrowsers();
+    toast('Sous-dossier supprimé');
+  }
+
+  /** Clic droit sur un espace vide : proposer de créer un sous-dossier
+      virtuel ici, façon écran d'accueil de téléphone. */
+  function createSubfolder(parentId) {
+    const input = el('input', { type: 'text', placeholder: 'Ex. Clients', value: 'Nouveau dossier' });
+    const body2 = el('div', { class: 'field' }, [el('label', { text: 'Nom du sous-dossier' }), input]);
+    const create = async () => {
+      await store.setVirtualFolder(newVirtualSubfolderId(), input.value, parentId);
+      close();
+      refreshAllBrowsers();
+      toast('Sous-dossier créé');
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
+    const footer = el('div', { style: { display: 'flex', justifyContent: 'flex-end', width: '100%' } }, [
+      el('button', { class: 'btn btn-primary', type: 'button', text: 'Créer', onclick: create }),
+    ]);
+    const close = openModal({ title: 'Nouveau sous-dossier', body: body2, footer });
   }
 
   /** Fiche détaillée : titre réel, lien complet, date d'ajout, copier le lien. */
@@ -407,12 +570,16 @@ export function mountFolderBrowser(body, opts) {
   }
 
   function contextItems(node) {
+    const virtualSub = isVirtualSubfolder(node.id);
     const items = [
       { label: 'Renommer' + (node.url ? ' le favori' : ' le dossier') + ' (local)', onClick: () => renameNode(node) },
       { label: 'Voir les détails', onClick: () => showDetails(node) },
     ];
     if (store.data.folderOverride[node.id]) {
       items.push('-', { label: '↩ Remettre à sa place réelle', onClick: () => unclassify(node) });
+    }
+    if (virtualSub) {
+      items.push('-', { label: '🗑 Supprimer ce sous-dossier', onClick: () => deleteSubfolder(node) });
     }
     return items;
   }
@@ -454,8 +621,12 @@ export function mountFolderBrowser(body, opts) {
     return a;
   }
 
-  function folderNode(node, tiles, badges, iconsOnly) {
+  /** `onOpen` : par défaut, navigue dans la liste inline (stack/render).
+      La modale du mode « Icône compacte » passe sa propre navigation. */
+  function folderNode(node, tiles, badges, iconsOnly, onOpen) {
+    const nav = onOpen || ((n) => { stack.push(n); render(); });
     const virtual = !!store.data.folderOverride[node.id];
+    const virtualSub = isVirtualSubfolder(node.id);
     const b = el('button', {
       class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
@@ -463,7 +634,7 @@ export function mountFolderBrowser(body, opts) {
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
       'data-bm-id': node.id,
       draggable: 'true',
-      onclick: () => { if (isEditing()) return; stack.push(node); render(); },
+      onclick: () => { if (isEditing()) return; nav(node); },
       oncontextmenu: (e) => { e.preventDefault(); openContextMenu(e.clientX, e.clientY, contextItems(node)); },
       ondragstart: (e) => {
         if (!isEditing()) return e.preventDefault();
@@ -474,7 +645,7 @@ export function mountFolderBrowser(body, opts) {
       },
       ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
     });
-    b.append(el('span', { class: 'glyph', text: '▸' }));
+    b.append(el('span', { class: 'glyph', text: virtualSub ? '📁' : '▸' }));
     if (!badges && !iconsOnly) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
     return b;
   }
@@ -487,6 +658,7 @@ export function mountFolderBrowser(body, opts) {
   liveBrowsers.add(render);
 
   wireDrop();
+  wireContextMenu();
   render();
 
   return {

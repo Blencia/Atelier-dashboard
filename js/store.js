@@ -36,6 +36,11 @@ export const DEFAULT_CONFIG = {
        différent de son vrai parent Chrome (classement virtuel entre modules) */
   folderOrder: {},
   folderOverride: {},
+  /* Sous-dossiers créés à la main (clic droit → Nouveau sous-dossier),
+     façon écran d'accueil de téléphone — n'existent que dans Atelier :
+     { [id]: { name, parent } }, id et parent référencent soit un vrai
+     dossier Chrome, soit un autre sous-dossier virtuel. */
+  virtualFolders: {},
   boards: [defaultBoard()],
   activeBoard: null, // résolu vers boards[0].id à la migration
 };
@@ -93,6 +98,14 @@ function migrate(cfg) {
   if (cfg.folderOrder && typeof cfg.folderOrder === 'object') {
     for (const [k, v] of Object.entries(cfg.folderOrder)) {
       if (Array.isArray(v)) out.folderOrder[k] = v.filter((id) => typeof id === 'string');
+    }
+  }
+  out.virtualFolders = {};
+  if (cfg.virtualFolders && typeof cfg.virtualFolders === 'object') {
+    for (const [id, vf] of Object.entries(cfg.virtualFolders)) {
+      if (vf && typeof vf.name === 'string' && typeof vf.parent === 'string') {
+        out.virtualFolders[id] = { name: vf.name, parent: vf.parent };
+      }
     }
   }
 
@@ -256,6 +269,25 @@ export const store = {
   async setFolderOverride(nodeId, targetFolderId) {
     if (targetFolderId) this.data.folderOverride[nodeId] = targetFolderId;
     else delete this.data.folderOverride[nodeId];
+    await this.save({ silent: true });
+  },
+
+  /** Sous-dossier virtuel : n'existe que dans Atelier, jamais dans les vrais
+      favoris Chrome. `id` et `parent` sont fabriqués par bmview.js. */
+  async setVirtualFolder(id, name, parent) {
+    this.data.virtualFolders[id] = { name: name?.trim() || 'Sans nom', parent };
+    await this.save({ silent: true });
+  },
+
+  async renameVirtualFolder(id, name) {
+    const vf = this.data.virtualFolders[id];
+    if (!vf || !name?.trim()) return;
+    vf.name = name.trim();
+    await this.save({ silent: true });
+  },
+
+  async removeVirtualFolder(id) {
+    delete this.data.virtualFolders[id];
     await this.save({ silent: true });
   },
 

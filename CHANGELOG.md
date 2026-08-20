@@ -6,6 +6,25 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Modifié
+- Fusion des modules **Dossier de favoris** et **Dossier** en un seul
+  module **Dossier**. « Dossier de favoris » disparaît du sélecteur
+  « Ajouter un module » ; ses réglages (tuiles, liste, liste dense,
+  icônes, pastilles) sont maintenant des options d'« Affichage » du
+  module Dossier, aux côtés d'une nouvelle option **Icône compacte**
+  (l'ancien comportement de Dossier : une icône façon écran d'accueil de
+  téléphone qui s'ouvre en fenêtre au clic). Les modules Dossier de
+  favoris déjà présents sur ton tableau de bord continuent de fonctionner
+  sans aucun changement — rien à refaire.
+
+### Ajouté
+- Clic droit dans un dossier (mode Icône compacte comme mode tuiles/liste) :
+  **+ Nouveau sous-dossier**. Crée un sous-dossier fait main, avec son
+  propre style façon dossier d'écran d'accueil de téléphone (glyphe 📁),
+  entièrement local à Atelier — jamais créé dans tes vrais favoris Chrome.
+  Se renomme et se supprime via le menu contextuel ; le supprimer libère
+  les favoris qu'il contenait au lieu de les faire disparaître.
+
 ## [1.5.0] — 2026-08-20
 
 ### Ajouté

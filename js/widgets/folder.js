@@ -1,22 +1,66 @@
 import { defineWidget } from '../registry.js';
-import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal, isEditing, toast } from '../ui.js';
-import { DND_TYPE, classifyIntoFolder, virtualFolderId, resolveDisplayedChildren } from '../bmview.js';
+import { findFolderByPath } from '../ui.js';
+import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 
-/* Petit widget « dossier » façon écran d'accueil de téléphone : un aperçu
-   réduit sur la feuille, qui s'ouvre en grille plein écran au clic. */
+/* Widget unique pour un dossier de favoris (réel ou virtuel) : Tuiles /
+   Icônes seules / Liste / Liste dense / Pastilles pour un affichage
+   toujours visible sur la feuille, ou Icône compacte pour un aperçu façon
+   écran d'accueil de téléphone qui s'ouvre en fenêtre au clic. Peut aussi
+   rester entièrement virtuel — laisse le dossier vide et remplis-le à la
+   main par glisser-déposer (panneau latéral ou clic droit → nouveau
+   sous-dossier, voir bmview.js).
 
-defineWidget({
-  type: 'folder',
+   Le type "bookmarks" reste enregistré (caché du sélecteur "Ajouter un
+   module", voir hidden ci-dessous) uniquement pour que les modules créés
+   avant la fusion des deux anciens widgets continuent de fonctionner tels
+   quels, sans migration de données. */
+
+const shared = {
   name: 'Dossier',
-  blurb: 'Aperçu compact d\'un dossier de favoris — s\'ouvre en grille au clic.',
-  defaultSize: { w: 2, h: 1 },
-  defaults: { folderId: null, folderPath: '', label: '' },
+  blurb: 'Un dossier de favoris — tuiles, liste, ou icône compacte qui s\'ouvre en fenêtre. Peut rester virtuel, rempli à la main.',
+  defaultSize: { w: 4, h: 2 },
+  defaults: {
+    folderId: null,
+    folderPath: '',
+    label: '',
+    view: 'tiles',
+    tile: 76,
+    icon: 26,
+    limit: 0,
+    openIn: 'current',
+    sort: 'manual',
+    showCrumbs: true,
+  },
   fields: [
     {
       key: 'folderId', label: 'Dossier', type: 'folder',
-      hint: 'Optionnel — laisse vide pour un dossier virtuel que tu remplis toi-même par glisser-déposer.',
+      hint: 'Optionnel — laisse vide pour un dossier virtuel que tu remplis toi-même par glisser-déposer, sans toucher à un vrai dossier Chrome.',
     },
     { key: 'label', label: 'Titre (vide = nom du dossier)', type: 'text' },
+    {
+      key: 'view', label: 'Affichage', type: 'select', gates: true,
+      options: [
+        ['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'],
+        ['compact', 'Liste dense'], ['badges', 'Pastilles'],
+        ['app', 'Icône compacte (ouvre une fenêtre)'],
+      ],
+    },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
+    {
+      key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2,
+      when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' || s.view === 'app',
+    },
+    {
+      key: 'sort', label: 'Tri', type: 'select', when: (s) => s.view !== 'app',
+      options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
+      hint: 'L\'ordre local est propre à Atelier — il ne change jamais l\'ordre réel dans Chrome.',
+    },
+    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200, when: (s) => s.view !== 'app' },
+    {
+      key: 'openIn', label: 'Ouvrir les liens', type: 'select',
+      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
+    },
+    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean', when: (s) => s.view !== 'app' },
   ],
 
   title(w) {
@@ -25,9 +69,6 @@ defineWidget({
 
   mount(body, ctx) {
     const s = ctx.settings;
-    let alive = true;
-    let currentRootId = null; // mis à jour par render(), lu par wireDrop() câblé une seule fois
-    body.classList.add('bm-dnd'); // reste interactif en mode plan pour accepter un glisser
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -39,149 +80,23 @@ defineWidget({
       if (s.folderPath) {
         const found = await findFolderByPath(s.folderPath);
         if (found) {
-          ctx.update({ folderId: found.id });
+          ctx.update({ folderId: found.id });   // auto-réparation après import
           return found.id;
         }
       }
-      // Aucun dossier Chrome assigné : dossier virtuel, rempli par glisser-déposer.
+      // Aucun dossier Chrome assigné : ce module devient un dossier virtuel,
+      // un simple bac qu'on remplit par glisser-déposer (panneau latéral,
+      // un autre module, ou clic droit → nouveau sous-dossier).
       return virtualFolderId(ctx.widget.id);
     }
 
-    function thumb(node) {
-      if (!node.url) return el('span', { class: 'glyph', text: '▸' });
-      const img = el('img', { src: faviconUrl(node.url, 32), alt: '', loading: 'lazy' });
-      img.addEventListener('error', () => {
-        img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
-      });
-      return img;
-    }
-
-    async function render() {
-      if (!alive) return;
-      clear(body);
-
-      const rootId = await resolveRoot();
-      currentRootId = rootId;
-      if (!rootId) {
-        body.append(el('p', { class: 'note', text: 'Aucun dossier choisi. Ouvre les réglages du module.' }));
-        return;
-      }
-
-      let children = [];
-      try { children = await resolveDisplayedChildren(rootId); } catch { /* dossier introuvable */ }
-
-      const name = s.label || s.folderPath?.split(' / ').pop() || 'Dossier';
-      const preview = el('div', { class: 'folder-preview' });
-      children.slice(0, 4).forEach((n) => preview.append(thumb(n)));
-      for (let i = children.length; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
-
-      body.append(el('button', {
-        class: 'folder-open', type: 'button', title: name,
-        onclick: () => { if (!isEditing()) openFolderModal(rootId, name); },
-      }, [preview, el('span', { class: 'folder-name', text: name })]));
-    }
-
-    /** Câblé une seule fois sur `body` (élément stable) — accepte un
-        favori/dossier glissé depuis un autre module et le classe
-        virtuellement ici (jamais un vrai chrome.bookmarks.move). */
-    function wireDrop() {
-      body.addEventListener('dragover', (e) => {
-        if (!isEditing() || !currentRootId || !e.dataTransfer.types.includes(DND_TYPE)) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        body.classList.add('bm-drop-target');
-      });
-      body.addEventListener('dragleave', (e) => {
-        if (e.target === body) body.classList.remove('bm-drop-target');
-      });
-      body.addEventListener('drop', async (e) => {
-        body.classList.remove('bm-drop-target');
-        if (!isEditing() || !currentRootId) return;
-        const bmId = e.dataTransfer.getData(DND_TYPE);
-        if (!bmId) return;
-        e.preventDefault();
-        const ok = await classifyIntoFolder(bmId, currentRootId);
-        toast(ok ? 'Classé ici — les vrais favoris Chrome ne sont pas touchés' : 'Déplacement impossible');
-        if (ok) render();
-      });
-    }
-
-    wireDrop();
-    render();
-    const refresh = () => render();
-    for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
-      chrome.bookmarks[ev].addListener(refresh);
-    }
-
-    return () => {
-      alive = false;
-      for (const ev of ['onCreated', 'onRemoved', 'onChanged', 'onMoved']) {
-        chrome.bookmarks[ev].removeListener(refresh);
-      }
-    };
+    const browser = mountFolderBrowser(body, {
+      resolveRoot, settings: s,
+      persistSettings: (patch) => ctx.update(patch, { silent: true }),
+    });
+    return () => browser.stop();
   },
-});
+};
 
-/** Grille plein écran, façon écran d'accueil, avec navigation dans les sous-dossiers. */
-function openFolderModal(rootId, title) {
-  let stack = [];
-  const grid = el('div', { class: 'folder-grid' });
-  const crumbs = el('nav', { class: 'bm-crumbs' });
-
-  async function draw() {
-    clear(grid);
-    clear(crumbs);
-    const currentId = stack.length ? stack[stack.length - 1].id : rootId;
-    let children = [];
-    try { children = await resolveDisplayedChildren(currentId); } catch { /* rien */ }
-
-    if (stack.length) {
-      crumbs.append(el('button', { type: 'button', text: '← racine', onclick: () => { stack = []; draw(); } }));
-      stack.forEach((node, i) => {
-        crumbs.append(el('span', { text: '/' }));
-        crumbs.append(el('button', {
-          type: 'button', text: node.title || '(sans nom)',
-          onclick: () => { stack = stack.slice(0, i + 1); draw(); },
-        }));
-      });
-    }
-
-    for (const node of children) {
-      grid.append(node.url ? linkTile(node) : folderTile(node));
-    }
-    if (!children.length) {
-      const text = currentId.startsWith('atelier:') && !stack.length
-        ? 'Dossier virtuel, vide pour l\'instant — glisse un favori du panneau latéral (mode plan) ou d\'un autre module pour le classer ici.'
-        : 'Dossier vide.';
-      grid.append(el('p', { class: 'note', text }));
-    }
-  }
-
-  function linkTile(node) {
-    const label = node.title || hostOf(node.url);
-    const a = el('a', {
-      class: 'tile', href: node.url, title: `${label}\n${node.url}`,
-      onclick: (e) => openLink(node.url, 'current', e),
-      onauxclick: (e) => openLink(node.url, 'current', e),
-    });
-    const img = el('img', { src: faviconUrl(node.url, 48), alt: '', loading: 'lazy' });
-    img.addEventListener('error', () => {
-      img.replaceWith(el('span', { class: 'glyph', text: initial(node.title, node.url) }));
-    });
-    a.append(img, el('span', { class: 'label', text: label }));
-    return a;
-  }
-
-  function folderTile(node) {
-    const b = el('button', {
-      class: 'tile', type: 'button',
-      style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit' },
-      onclick: () => { stack.push(node); draw(); },
-    });
-    b.append(el('span', { class: 'glyph', text: '▸' }), el('span', { class: 'label', text: node.title || '(sans nom)' }));
-    return b;
-  }
-
-  draw();
-  openModal({ title, body: el('div', {}, [crumbs, grid]) });
-}
+defineWidget({ ...shared, type: 'folder' });
+defineWidget({ ...shared, type: 'bookmarks', hidden: true });

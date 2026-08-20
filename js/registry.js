@@ -28,3 +28,6 @@ export function defineWidget(def) {
 
 export const getWidget = (type) => defs.get(type);
 export const allWidgets = () => [...defs.values()];
+/** Comme allWidgets(), sans les types cachés (alias gardés pour compatibilité
+    arrière — ex. l'ancien type "bookmarks", fusionné dans "folder"). */
+export const visibleWidgets = () => [...defs.values()].filter((d) => !d.hidden);
