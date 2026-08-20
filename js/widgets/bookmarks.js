@@ -28,7 +28,8 @@ defineWidget({
     { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
-      options: [['manual', 'Ordre du dossier'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
+      options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
+      hint: 'L\'ordre local est propre à Atelier — il ne change jamais l\'ordre réel dans Chrome.',
     },
     { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200 },
     {
@@ -62,7 +63,10 @@ defineWidget({
       return null;
     }
 
-    const browser = mountFolderBrowser(body, { resolveRoot, settings: s });
+    const browser = mountFolderBrowser(body, {
+      resolveRoot, settings: s,
+      persistSettings: (patch) => ctx.update(patch, { silent: true }),
+    });
     return () => browser.stop();
   },
 });

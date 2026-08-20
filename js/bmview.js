@@ -5,24 +5,75 @@ import {
 } from './ui.js';
 
 /* Navigateur de dossier de favoris réutilisable : tuiles/liste/pastilles,
-   sous-dossiers, glisser vers un autre module (chrome.bookmarks.move),
-   alias local, menu clic droit (renommer/détails). Utilisé par les modules
-   Dossier de favoris et Dossier à onglets — voir js/widgets/bookmarks.js et
-   js/widgets/foldertabs.js. */
+   sous-dossiers, glisser vers un autre module, alias local, menu clic droit
+   (renommer/détails). Utilisé par les modules Dossier de favoris et Dossier
+   à onglets — voir js/widgets/bookmarks.js et js/widgets/foldertabs.js.
+
+   IMPORTANT — organisation virtuelle : Atelier NE modifie JAMAIS tes vrais
+   favoris Chrome (ni leur ordre, ni leur dossier). Le contenu (existence,
+   titre, lien) reste toujours lu en direct depuis chrome.bookmarks. Seuls
+   l'ORDRE affiché (store.data.folderOrder) et le DOSSIER D'AFFICHAGE
+   (store.data.folderOverride, quand tu glisses un favori vers un autre
+   module) sont des surcouches locales, stockées à part. Un favori supprimé
+   ou renommé dans Chrome se reflète toujours immédiatement ici. */
 
 const DND_TYPE = 'application/x-atelier-bookmark-id';
+
+/* store.setFolderOrder/setFolderOverride sauvegardent en silencieux (pas de
+   rebuild global de app.js, et de toute façon folderOrder/folderOverride ne
+   font pas partie de la signature qui déclenche ce rebuild) — sans ceci,
+   glisser un favori dans UN module ne rafraîchirait pas les autres modules
+   qui affichent le même dossier réel. */
+const liveBrowsers = new Set();
+function refreshAllBrowsers() {
+  for (const render of liveBrowsers) render();
+}
+
+// Ménage : si un favori/dossier disparaît vraiment de Chrome, son classement
+// et sa position locale n'ont plus de sens — un seul listener pour toute
+// l'extension (module ES = singleton), pas un par module monté.
+chrome.bookmarks.onRemoved.addListener((id) => {
+  let changed = false;
+  if (store.data.folderOverride[id]) { delete store.data.folderOverride[id]; changed = true; }
+  if (store.data.folderOrder[id]) { delete store.data.folderOrder[id]; changed = true; }
+  for (const order of Object.values(store.data.folderOrder)) {
+    const i = order.indexOf(id);
+    if (i !== -1) { order.splice(i, 1); changed = true; }
+  }
+  if (changed) store.save({ silent: true });
+});
 
 /**
  * @param {HTMLElement} body      conteneur à remplir (vidé et rempli à chaque rendu)
  * @param {object} opts
  * @param {() => Promise<string|null>} opts.resolveRoot  id du dossier racine à afficher
  * @param {object} opts.settings  { view, tile, icon, sort, limit, openIn, showCrumbs }
+ * @param {(patch: object) => Promise} [opts.persistSettings]  pour basculer
+ *        automatiquement en tri « Ordre du dossier » quand on glisse-dépose
  */
 export function mountFolderBrowser(body, opts) {
-  const { resolveRoot, settings: s } = opts;
+  const { resolveRoot, settings: s, persistSettings } = opts;
   let stack = [];   // navigation interne, remise à zéro par resetStack()
   let alive = true;
   body.classList.add('bm-dnd');
+
+  /** Enfants réellement affichés dans `folderId` : ceux de Chrome, moins ceux
+      classés virtuellement ailleurs, plus ceux classés virtuellement ici. */
+  async function resolveChildren(folderId) {
+    const real = await chrome.bookmarks.getChildren(folderId);
+    const overrides = store.data.folderOverride;
+    const items = real.filter((c) => !(overrides[c.id] && overrides[c.id] !== folderId));
+
+    const incomingIds = Object.keys(overrides).filter((id) => overrides[id] === folderId);
+    for (const id of incomingIds) {
+      if (items.some((c) => c.id === id)) continue;
+      try {
+        const [node] = await chrome.bookmarks.get(id);
+        if (node && node.parentId !== folderId) items.push(node);
+      } catch { /* favori supprimé entretemps : classement caduc, ignoré */ }
+    }
+    return items;
+  }
 
   async function render() {
     if (!alive) return;
@@ -35,9 +86,9 @@ export function mountFolderBrowser(body, opts) {
     }
 
     const currentId = stack.length ? stack[stack.length - 1].id : rootId;
-    let children;
+    let items;
     try {
-      children = await chrome.bookmarks.getChildren(currentId);
+      items = await resolveChildren(currentId);
     } catch {
       body.append(el('p', { class: 'note', text: 'Lecture du dossier impossible.' }));
       return;
@@ -59,13 +110,26 @@ export function mountFolderBrowser(body, opts) {
       body.append(crumbs);
     }
 
-    let items = children.slice();
     if (s.sort === 'alpha') {
       items.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'));
+      items.sort((a, b) => (!!a.url) - (!!b.url)); // dossiers d'abord, toujours
     } else if (s.sort === 'recent') {
       items.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+      items.sort((a, b) => (!!a.url) - (!!b.url));
+    } else {
+      // manuel : ordre local (glisser-déposer dans Atelier), jamais écrit dans Chrome
+      const order = store.data.folderOrder[currentId];
+      if (order?.length) {
+        const pos = new Map(order.map((id, i) => [id, i]));
+        items.sort((a, b) => {
+          const pa = pos.has(a.id) ? pos.get(a.id) : Infinity;
+          const pb = pos.has(b.id) ? pos.get(b.id) : Infinity;
+          return pa !== pb ? pa - pb : (!!a.url) - (!!b.url);
+        });
+      } else {
+        items.sort((a, b) => (!!a.url) - (!!b.url));
+      }
     }
-    items.sort((a, b) => (!!a.url) - (!!b.url)); // dossiers d'abord, toujours
     if (s.limit > 0) items = items.slice(0, s.limit);
 
     if (!items.length) {
@@ -109,6 +173,37 @@ export function mountFolderBrowser(body, opts) {
     return { el: best, before };
   }
 
+  /** Classe virtuellement `bmId` dans `targetFolderId`, à la position visuelle
+      demandée — jamais un chrome.bookmarks.move. Le vrai favori ne bouge pas. */
+  async function dropInto(wrap, targetFolderId, bmId, refId, before) {
+    let node;
+    try { [node] = await chrome.bookmarks.get(bmId); } catch { return false; }
+
+    const displayFolder = store.data.folderOverride[bmId] || node.parentId;
+    if (displayFolder !== targetFolderId) {
+      await store.setFolderOverride(bmId, targetFolderId === node.parentId ? null : targetFolderId);
+    }
+
+    // Ordre local : la séquence actuellement affichée dans ce module, avec
+    // bmId inséré au bon endroit.
+    const currentIds = [...wrap.children].map((n) => n.dataset.bmId).filter((id) => id && id !== bmId);
+    let insertAt = currentIds.length;
+    if (refId) {
+      const idx = currentIds.indexOf(refId);
+      if (idx !== -1) insertAt = before ? idx : idx + 1;
+    }
+    currentIds.splice(insertAt, 0, bmId);
+    await store.setFolderOrder(targetFolderId, currentIds);
+
+    // Le dépôt ne se voit que si ce module est trié « Ordre du dossier » —
+    // on y bascule automatiquement, sinon le glisser semblerait ne rien faire.
+    if (s.sort !== 'manual' && persistSettings) {
+      s.sort = 'manual';
+      await persistSettings({ sort: 'manual' });
+    }
+    return true;
+  }
+
   function wireDrop(wrap, targetFolderId) {
     let marked = null;
     const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
@@ -133,23 +228,12 @@ export function mountFolderBrowser(body, opts) {
       if (!bmId) return;
       e.preventDefault();
 
-      const dest = { parentId: targetFolderId };
-      const refId = near?.dataset.bmId;
-      if (refId && refId !== bmId) {
-        try {
-          // Index dans la vraie liste (non triée à l'affichage) du dossier —
-          // Chrome ajuste lui-même le décalage si le favori vient du même dossier.
-          const raw = await chrome.bookmarks.getChildren(targetFolderId);
-          const refIdx = raw.findIndex((c) => c.id === refId);
-          if (refIdx !== -1) dest.index = before ? refIdx : refIdx + 1;
-        } catch { /* tant pis, on dépose à la fin */ }
-      }
-
-      try {
-        await chrome.bookmarks.move(bmId, dest);
-        toast('Favori déplacé');
-      } catch {
-        toast('Déplacement impossible — dossier invalide ?');
+      const ok = await dropInto(wrap, targetFolderId, bmId, near?.dataset.bmId, before);
+      if (ok) {
+        toast('Classé ici — les vrais favoris Chrome ne sont pas touchés');
+        refreshAllBrowsers();
+      } else {
+        toast('Déplacement impossible');
       }
     });
   }
@@ -188,13 +272,21 @@ export function mountFolderBrowser(body, opts) {
     const close = openModal({ title: 'Renommer ce favori', body: body2, footer });
   }
 
+  /** Retire un favori/dossier de son classement virtuel — il redevient
+      affiché sous son vrai dossier Chrome. */
+  async function unclassify(node) {
+    await store.setFolderOverride(node.id, null);
+    refreshAllBrowsers();
+    toast('Remis à sa place réelle dans Chrome');
+  }
+
   /** Fiche détaillée : titre réel, lien complet, date d'ajout, copier le lien. */
   function showDetails(node) {
     const alias = store.data.aliases[node.id];
     const rows = [
       ['Titre', node.title || '(sans titre)'],
       alias ? ['Nom affiché (local)', alias] : null,
-      ['Lien', node.url],
+      node.url ? ['Lien', node.url] : null,
       [
         'Ajouté le',
         node.dateAdded
@@ -211,7 +303,7 @@ export function mountFolderBrowser(body, opts) {
       ]));
     }
 
-    const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
+    const footer = node.url ? el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
       el('button', {
         class: 'btn', type: 'button', text: 'Copier le lien',
         onclick: async () => {
@@ -221,30 +313,36 @@ export function mountFolderBrowser(body, opts) {
       }),
       el('span', { style: { flex: '1' } }),
       el('a', { class: 'btn btn-primary', href: node.url, target: '_blank', rel: 'noopener', text: 'Ouvrir le lien' }),
-    ]);
+    ]) : null;
 
-    openModal({ title: 'Détails du favori', body: body2, footer });
+    openModal({ title: node.url ? 'Détails du favori' : 'Détails du dossier', body: body2, footer });
+  }
+
+  function contextItems(node) {
+    const items = [
+      { label: 'Renommer' + (node.url ? ' le favori' : ' le dossier') + ' (local)', onClick: () => renameNode(node) },
+      { label: 'Voir les détails', onClick: () => showDetails(node) },
+    ];
+    if (store.data.folderOverride[node.id]) {
+      items.push('-', { label: '↩ Remettre à sa place réelle', onClick: () => unclassify(node) });
+    }
+    return items;
   }
 
   function linkNode(node, tiles, badges) {
     // textContent partout : un titre de favori peut contenir du HTML.
     const alias = store.data.aliases[node.id];
     const label = alias || node.title || hostOf(node.url);
+    const virtual = !!store.data.folderOverride[node.id];
     const a = el('a', {
-      class: badges ? 'badge' : tiles ? 'tile' : 'row',
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
       href: node.url,
-      title: `${label}\n${node.url}`,
+      title: `${label}\n${node.url}${virtual ? '\n(classé ici dans Atelier seulement)' : ''}`,
       'data-bm-id': node.id,
       draggable: 'true', // el() ne stringifie que `true` littéral en "" — 'draggable' exige la chaîne "true"
       onclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
       onauxclick: (e) => { if (isEditing()) return e.preventDefault(); openLink(node.url, s.openIn, e); },
-      oncontextmenu: (e) => {
-        e.preventDefault();
-        openContextMenu(e.clientX, e.clientY, [
-          { label: 'Renommer le favori', onClick: () => renameNode(node) },
-          { label: 'Voir les détails', onClick: () => showDetails(node) },
-        ]);
-      },
+      oncontextmenu: (e) => { e.preventDefault(); openContextMenu(e.clientX, e.clientY, contextItems(node)); },
       ondragstart: (e) => {
         if (!isEditing()) return e.preventDefault();
         // stopPropagation : sans ça, ce dragstart remonte jusqu'à l'article
@@ -269,14 +367,16 @@ export function mountFolderBrowser(body, opts) {
   }
 
   function folderNode(node, tiles, badges) {
+    const virtual = !!store.data.folderOverride[node.id];
     const b = el('button', {
-      class: badges ? 'badge' : tiles ? 'tile' : 'row',
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
-      title: node.title,
+      title: virtual ? `${node.title}\n(classé ici dans Atelier seulement)` : node.title,
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
       'data-bm-id': node.id,
       draggable: 'true',
       onclick: () => { if (isEditing()) return; stack.push(node); render(); },
+      oncontextmenu: (e) => { e.preventDefault(); openContextMenu(e.clientX, e.clientY, contextItems(node)); },
       ondragstart: (e) => {
         if (!isEditing()) return e.preventDefault();
         e.stopPropagation();
@@ -296,6 +396,7 @@ export function mountFolderBrowser(body, opts) {
   chrome.bookmarks.onRemoved.addListener(refresh);
   chrome.bookmarks.onChanged.addListener(refresh);
   chrome.bookmarks.onMoved.addListener(refresh);
+  liveBrowsers.add(render);
 
   render();
 
@@ -304,6 +405,7 @@ export function mountFolderBrowser(body, opts) {
     resetStack() { stack = []; },
     stop() {
       alive = false;
+      liveBrowsers.delete(render);
       chrome.bookmarks.onCreated.removeListener(refresh);
       chrome.bookmarks.onRemoved.removeListener(refresh);
       chrome.bookmarks.onChanged.removeListener(refresh);

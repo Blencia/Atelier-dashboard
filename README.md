@@ -138,12 +138,34 @@ Options communes : `hint` (texte d'aide), `when: (settings) => bool` (champ
 conditionnel), `gates: true` (ce champ pilote l'affichage d'autres champs et
 force le re-rendu du formulaire).
 
+## Organisation locale vs. vrais favoris
+
+Atelier et Chrome sont deux entités séparées : le **contenu** (existence,
+titre, lien d'un favori) est toujours lu en direct depuis `chrome.bookmarks`
+— rien de local ne s'en écarte, ajoute/renomme/supprime dans Chrome et ça se
+reflète ici. Mais l'**organisation** que tu construis dans Atelier (l'ordre
+dans un module, le fait qu'un favori apparaisse dans tel module plutôt que
+tel autre après un glisser-déposer) est stockée à part
+(`store.data.folderOrder`, `store.data.folderOverride`) et n'est **jamais**
+écrite dans tes vrais favoris Chrome. Aucun `chrome.bookmarks.move` /
+`create` / `remove` / `update` nulle part dans le code — vérifiable avec
+`grep -rn "bookmarks\.\(move\|create\|remove\|update\)" js/`.
+
+Concrètement : glisser un favori vers un autre module en mode plan le
+« classe » virtuellement là — un petit point apparaît au survol pour le
+signaler, et le clic droit propose « ↩ Remettre à sa place réelle » pour
+annuler. Réordonner (tri « Ordre local ») ne touche jamais l'ordre réel dans
+Chrome non plus.
+
 ## Sauvegarde
 
 Réglages → Données → **Exporter** produit un `.json` avec toute la mise en page.
 À l'import sur une autre machine, les IDs de dossiers ne correspondent pas :
 chaque module de favoris se répare tout seul en retrouvant le dossier par son
-chemin (`Barre de favoris / Dev / Docs`).
+chemin (`Barre de favoris / Dev / Docs`). L'ordre local et le classement
+virtuel (`folderOrder`/`folderOverride`) voyagent aussi dans l'export, mais
+comme ils sont indexés par ID de favori, ils ne se répareront pas tout seuls
+sur un profil où les favoris ont été recréés avec de nouveaux IDs.
 
 ## Publier
 

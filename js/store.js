@@ -30,6 +30,12 @@ export const DEFAULT_CONFIG = {
     openIn: 'current',
   },
   aliases: {},
+  /* Organisation locale des favoris, jamais écrite dans les vrais favoris Chrome :
+     - folderOrder[folderId]  = ordre manuel des enfants affichés dans ce dossier
+     - folderOverride[nodeId] = dossier réel où AFFICHER ce favori/dossier,
+       différent de son vrai parent Chrome (classement virtuel entre modules) */
+  folderOrder: {},
+  folderOverride: {},
   boards: [defaultBoard()],
   activeBoard: null, // résolu vers boards[0].id à la migration
 };
@@ -80,6 +86,13 @@ function migrate(cfg) {
     out[k] = { ...out[k], ...(cfg[k] || {}) };
   }
   out.aliases = cfg.aliases && typeof cfg.aliases === 'object' ? { ...cfg.aliases } : {};
+  out.folderOverride = cfg.folderOverride && typeof cfg.folderOverride === 'object' ? { ...cfg.folderOverride } : {};
+  out.folderOrder = {};
+  if (cfg.folderOrder && typeof cfg.folderOrder === 'object') {
+    for (const [k, v] of Object.entries(cfg.folderOrder)) {
+      if (Array.isArray(v)) out.folderOrder[k] = v.filter((id) => typeof id === 'string');
+    }
+  }
 
   if (Array.isArray(cfg.boards) && cfg.boards.length) {
     // Schéma v2 : plusieurs feuilles.
@@ -227,6 +240,20 @@ export const store = {
     const clean = text?.trim();
     if (clean) this.data.aliases[bookmarkId] = clean;
     else delete this.data.aliases[bookmarkId];
+    await this.save({ silent: true });
+  },
+
+  /** Ordre local des enfants d'un dossier — jamais écrit dans les vrais favoris Chrome. */
+  async setFolderOrder(folderId, ids) {
+    this.data.folderOrder[folderId] = ids;
+    await this.save({ silent: true });
+  },
+
+  /** Classement virtuel : affiche ce favori/dossier sous `targetFolderId` dans Atelier,
+      sans jamais le déplacer dans les vrais favoris Chrome. `null` retire le classement. */
+  async setFolderOverride(nodeId, targetFolderId) {
+    if (targetFolderId) this.data.folderOverride[nodeId] = targetFolderId;
+    else delete this.data.folderOverride[nodeId];
     await this.save({ silent: true });
   },
 

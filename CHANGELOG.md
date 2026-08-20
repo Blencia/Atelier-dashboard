@@ -6,6 +6,25 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Modifié — changement de comportement important
+- **L'organisation dans Atelier (ordre, classement entre modules) est
+  maintenant entièrement locale à Atelier et n'écrit plus jamais dans tes
+  vrais favoris Chrome.** Avant, réordonner ou glisser un favori vers un
+  autre module modifiait réellement tes favoris (`chrome.bookmarks.move`).
+  Ce n'est plus le cas : le CONTENU (existence, titre, lien) continue de
+  suivre Chrome en direct — ajoute/renomme/supprime un favori dans Chrome,
+  ça se reflète toujours ici — mais l'ordre affiché et le dossier dans
+  lequel un favori apparaît dans Atelier sont désormais deux surcouches
+  locales séparées (`chrome.storage.local`), jamais écrites dans Chrome.
+- Glisser un favori vers un autre module « classe » virtuellement ce favori
+  dans ce module (menu clic droit → « ↩ Remettre à sa place réelle » pour
+  annuler) — le vrai favori Chrome ne bouge pas d'un poil.
+- Petit point discret au survol d'un favori/dossier classé virtuellement,
+  pour distinguer sa place « réelle » (Chrome) de sa place « affichée »
+  (Atelier).
+- Le tri « Ordre du dossier » est renommé « Ordre local (glisser-déposer) »
+  pour que ce soit sans équivoque.
+
 ## [1.1.0] — 2026-08-19
 
 ### Ajouté
