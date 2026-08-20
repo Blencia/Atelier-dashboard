@@ -850,6 +850,8 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
 /* ---------- Panneau latéral : tous les favoris (mode plan) ---------- */
 
 .side-panel {
+  /* top réajusté en JS (sidepanel.js/syncTop) sous la cartouche, qui est en
+     position: sticky et n'a donc pas de hauteur fixe fiable en CSS seul. */
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 35;
   width: 280px;
   display: flex; flex-direction: column;
@@ -2813,6 +2815,16 @@ let all = [];
 let panel, list, searchInput;
 let listening = false;
 
+/** La cartouche est `position: sticky`, pas fixe — son décalage top:0 en dur
+    la faisait passer SOUS elle. On mesure sa hauteur réelle (qui varie si
+    elle retombe sur 2 lignes) plutôt que de deviner une valeur. */
+function syncTop() {
+  if (!panel) return;
+  const titleblock = document.getElementById('titleblock');
+  panel.style.top = `${titleblock ? titleblock.getBoundingClientRect().bottom : 0}px`;
+}
+window.addEventListener('resize', debounce(syncTop, 100));
+
 function row(bm) {
   const label = bm.title || hostOf(bm.url);
   const r = el('div', {
@@ -2873,6 +2885,7 @@ function ensurePanel() {
 
 function showSidePanel() {
   ensurePanel();
+  syncTop();
   panel.hidden = false;
   if (!listening) {
     listening = true;

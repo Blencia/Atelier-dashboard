@@ -6,6 +6,12 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Corrigé
+- Panneau latéral « Tous les favoris » : sa position (`top: 0` fixe) ne
+  tenait pas compte de la cartouche (`position: sticky`, hauteur variable),
+  ce qui le faisait passer sous elle. Sa position est maintenant mesurée en
+  JS et réajustée à l'ouverture et au redimensionnement de la fenêtre.
+
 ## [1.4.0] — 2026-08-20
 
 ### Corrigé

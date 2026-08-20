@@ -11,6 +11,16 @@ let all = [];
 let panel, list, searchInput;
 let listening = false;
 
+/** La cartouche est `position: sticky`, pas fixe — son décalage top:0 en dur
+    la faisait passer SOUS elle. On mesure sa hauteur réelle (qui varie si
+    elle retombe sur 2 lignes) plutôt que de deviner une valeur. */
+function syncTop() {
+  if (!panel) return;
+  const titleblock = document.getElementById('titleblock');
+  panel.style.top = `${titleblock ? titleblock.getBoundingClientRect().bottom : 0}px`;
+}
+window.addEventListener('resize', debounce(syncTop, 100));
+
 function row(bm) {
   const label = bm.title || hostOf(bm.url);
   const r = el('div', {
@@ -71,6 +81,7 @@ function ensurePanel() {
 
 export function showSidePanel() {
   ensurePanel();
+  syncTop();
   panel.hidden = false;
   if (!listening) {
     listening = true;

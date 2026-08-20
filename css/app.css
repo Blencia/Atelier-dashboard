@@ -843,6 +843,8 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
 /* ---------- Panneau latéral : tous les favoris (mode plan) ---------- */
 
 .side-panel {
+  /* top réajusté en JS (sidepanel.js/syncTop) sous la cartouche, qui est en
+     position: sticky et n'a donc pas de hauteur fixe fiable en CSS seul. */
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 35;
   width: 280px;
   display: flex; flex-direction: column;
