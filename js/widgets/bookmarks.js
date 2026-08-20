@@ -22,10 +22,10 @@ defineWidget({
     { key: 'folderId', label: 'Dossier', type: 'folder' },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
-      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
+      options: [['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
     },
-    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],

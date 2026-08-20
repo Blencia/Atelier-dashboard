@@ -134,10 +134,12 @@ export function mountFolderBrowser(body, opts) {
 
     if (!items.length) {
       body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+      wireDrop(body, body, currentId); // pas de tuiles, mais on peut quand même y déposer un favori
       return;
     }
 
-    const tiles = s.view === 'tiles';
+    const iconsOnly = s.view === 'icons';
+    const tiles = s.view === 'tiles' || iconsOnly;
     const badges = s.view === 'badges';
     const wrap = el('div', {
       class: badges ? 'bm-badges' : tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
@@ -150,10 +152,13 @@ export function mountFolderBrowser(body, opts) {
     }
 
     for (const node of items) {
-      wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
+      wrap.append(node.url ? linkNode(node, tiles, badges, iconsOnly) : folderNode(node, tiles, badges, iconsOnly));
     }
-    wireDrop(wrap, currentId);
     body.append(wrap);
+    // Sur `body` (toute la hauteur du module), pas juste `wrap` (taille du
+    // contenu) : sinon lâcher dans l'espace vide autour des tuiles ne
+    // déclenchait rien quand le module est plus grand que son contenu.
+    wireDrop(body, wrap, currentId);
   }
 
   /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
@@ -204,23 +209,25 @@ export function mountFolderBrowser(body, opts) {
     return true;
   }
 
-  function wireDrop(wrap, targetFolderId) {
+  /** `target` reçoit les écouteurs (toute la hauteur du module, pas juste le
+      contenu) ; `wrap` sert uniquement à calculer le voisin le plus proche. */
+  function wireDrop(target, wrap, targetFolderId) {
     let marked = null;
     const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
 
-    wrap.addEventListener('dragover', (e) => {
+    target.addEventListener('dragover', (e) => {
       if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      wrap.classList.add('bm-drop-target');
+      target.classList.add('bm-drop-target');
       const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
       if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
-    wrap.addEventListener('dragleave', (e) => {
-      if (e.target === wrap) { wrap.classList.remove('bm-drop-target'); unmark(); }
+    target.addEventListener('dragleave', (e) => {
+      if (e.target === target) { target.classList.remove('bm-drop-target'); unmark(); }
     });
-    wrap.addEventListener('drop', async (e) => {
-      wrap.classList.remove('bm-drop-target');
+    target.addEventListener('drop', async (e) => {
+      target.classList.remove('bm-drop-target');
       const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
       unmark();
       if (!isEditing()) return;
@@ -329,13 +336,13 @@ export function mountFolderBrowser(body, opts) {
     return items;
   }
 
-  function linkNode(node, tiles, badges) {
+  function linkNode(node, tiles, badges, iconsOnly) {
     // textContent partout : un titre de favori peut contenir du HTML.
     const alias = store.data.aliases[node.id];
     const label = alias || node.title || hostOf(node.url);
     const virtual = !!store.data.folderOverride[node.id];
     const a = el('a', {
-      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       href: node.url,
       title: `${label}\n${node.url}${virtual ? '\n(classé ici dans Atelier seulement)' : ''}`,
       'data-bm-id': node.id,
@@ -355,7 +362,7 @@ export function mountFolderBrowser(body, opts) {
       ondragend: (e) => { e.stopPropagation(); a.classList.remove('dragging-bm'); },
     });
     a.append(iconFor(node, tiles || badges));
-    if (!badges) {
+    if (!badges && !iconsOnly) {
       a.append(el('span', { class: 'label', text: label }));
       a.append(el('button', {
         class: 'bm-rename', type: 'button', title: 'Renommer (local)', text: '✎',
@@ -366,10 +373,10 @@ export function mountFolderBrowser(body, opts) {
     return a;
   }
 
-  function folderNode(node, tiles, badges) {
+  function folderNode(node, tiles, badges, iconsOnly) {
     const virtual = !!store.data.folderOverride[node.id];
     const b = el('button', {
-      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
       title: virtual ? `${node.title}\n(classé ici dans Atelier seulement)` : node.title,
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
@@ -387,7 +394,7 @@ export function mountFolderBrowser(body, opts) {
       ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
     });
     b.append(el('span', { class: 'glyph', text: '▸' }));
-    if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
+    if (!badges && !iconsOnly) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
     return b;
   }
 

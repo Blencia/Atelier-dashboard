@@ -46,6 +46,7 @@ export function makeWidget(type, settings = {}, size = {}) {
     type,
     w: size.w ?? 3,
     h: size.h ?? 2,
+    color: null,
     settings,
   };
 }
@@ -58,6 +59,7 @@ function sanitizeWidgets(list) {
       type: w.type,
       w: clamp(+w.w || 3, 1, 12),
       h: clamp(+w.h || 2, 1, 6),
+      color: typeof w.color === 'string' && /^#[0-9a-f]{6}$/i.test(w.color) ? w.color : null,
       settings: w.settings && typeof w.settings === 'object' ? w.settings : {},
     }));
 }

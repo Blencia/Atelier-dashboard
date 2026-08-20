@@ -126,9 +126,10 @@ function rebuild() {
 
 function buildWidget(w) {
   const def = getWidget(w.type);
-  const node = el('article', { class: 'widget', 'data-id': w.id });
+  const node = el('article', { class: `widget${w.color ? ' has-accent' : ''}`, 'data-id': w.id });
   node.style.setProperty('--w', w.w);
   node.style.setProperty('--h', w.h);
+  if (w.color) node.style.setProperty('--widget-accent', w.color);
 
   const head = el('div', { class: 'widget-head' }, [
     el('span', { class: 'widget-title', text: def ? def.title(w) : 'Module inconnu' }),

@@ -6,6 +6,20 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Corrigé
+- Mode plan : glisser un favori vers un **autre** module ne fonctionnait pas
+  si ce module était plus grand que son contenu (zone de dépôt limitée aux
+  tuiles elles-mêmes). La zone de dépôt couvre maintenant tout le module.
+  Idem pour déposer dans un dossier vide.
+
+### Ajouté
+- Vue « Icônes seules » pour Dossier de favoris et Dossier à onglets : juste
+  l'icône, sans nom en dessous — plus épuré que la vue Tuiles.
+- Couleur personnalisée par module (n'importe lequel, pas juste les
+  dossiers) : réglages du module → Couleur. La bordure et le fond du module
+  reprennent cette teinte, dans le même style visuel qu'aujourd'hui (juste
+  teinté, pas un nouveau style).
+
 ## [1.2.0] — 2026-08-20
 
 ### Modifié — changement de comportement important

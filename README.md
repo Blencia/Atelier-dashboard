@@ -52,8 +52,9 @@ Rien ne sort de la machine : aucune requête réseau, aucun compte.
 | `Échap` | Sort du mode plan |
 | Glisser l'en-tête d'un module | Le déplacer |
 | Tirer le coin bas-droit | Le redimensionner |
-| ⚙ dans l'en-tête | Réglages du module |
+| ⚙ dans l'en-tête | Réglages du module (dimensions, couleur, options propres au module) |
 | ✎ au survol d'un favori | Renomme l'affichage localement (le favori Chrome n'est pas touché) |
+| Glisser un favori vers un autre module | Le classe virtuellement là (voir « Organisation locale » plus bas) |
 
 En mode plan, la feuille révèle le papier millimétré, la règle de colonnes et les
 dimensions de chaque module (`4×2` = 4 colonnes sur 2 rangées).

@@ -184,6 +184,48 @@ export async function openWidgetSettings(widgetId) {
     await store.patchSettings(widget.id, values);
   }));
 
+  body.append(el('p', { class: 'section-label', text: 'Couleur' }));
+  const colorBox = el('div');
+  const colorToggle = el('input', { type: 'checkbox', checked: !!widget.color });
+
+  const renderColorBox = () => {
+    clear(colorBox);
+    if (!colorToggle.checked) return;
+    const swatches = el('div', { class: 'swatches' });
+    const custom = el('input', { type: 'color', value: widget.color || '#e3a008' });
+    const paint = (hex) => {
+      widget.color = hex;
+      custom.value = hex;
+      [...swatches.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.hex === hex)));
+      store.patchWidget(widget.id, { color: hex });
+    };
+    for (const hex of ACCENTS) {
+      swatches.append(el('button', {
+        class: 'swatch', type: 'button', 'data-hex': hex, 'aria-label': hex,
+        'aria-pressed': String(widget.color === hex),
+        style: { background: hex }, onclick: () => paint(hex),
+      }));
+    }
+    custom.addEventListener('change', () => paint(custom.value));
+    swatches.append(custom);
+    colorBox.append(el('div', { class: 'field' }, [
+      el('label', { text: 'Couleur du module' }), swatches,
+      el('p', { class: 'field-hint', text: 'La bordure et le fond du module reprennent cette teinte, dans le même style qu\'aujourd\'hui.' }),
+    ]));
+  };
+
+  colorToggle.addEventListener('change', async () => {
+    widget.color = colorToggle.checked ? (widget.color || '#e3a008') : null;
+    await store.patchWidget(widget.id, { color: widget.color });
+    renderColorBox();
+  });
+
+  body.append(el('div', { class: 'field field-inline' }, [
+    el('label', { text: 'Couleur personnalisée pour ce module' }), colorToggle,
+  ]));
+  body.append(colorBox);
+  renderColorBox();
+
   body.append(el('p', { class: 'section-label', text: 'Dimensions' }));
   const dims = el('div', { class: 'field-row' });
   dims.append(

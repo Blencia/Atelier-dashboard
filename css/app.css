@@ -280,6 +280,16 @@ body.is-editing .ruler { display: grid; }
 }
 .widget:hover { border-color: color-mix(in srgb, var(--rule) 60%, var(--graphite-3)); }
 
+/* Couleur par module : même structure (fond translucide + bordure 1px) que
+   le style par défaut, juste teintée par --widget-accent choisi dans les
+   réglages du module. */
+.widget.has-accent {
+  background: color-mix(in srgb, var(--widget-accent) 9%, var(--panel) 91%);
+  border-color: color-mix(in srgb, var(--widget-accent) 45%, var(--rule));
+}
+.widget.has-accent:hover { border-color: color-mix(in srgb, var(--widget-accent) 65%, var(--rule)); }
+.widget.has-accent .widget-head { border-bottom-color: color-mix(in srgb, var(--widget-accent) 25%, var(--rule-soft)); }
+
 .widget-head {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 12px;
@@ -388,6 +398,7 @@ body.is-editing .handle { display: block; }
   overflow: hidden; word-break: break-word;
 }
 body[data-labels="off"] .tile span.label { display: none; }
+.tile.is-icon-only { justify-content: center; padding-top: 14px; padding-bottom: 14px; }
 
 .bm-list { display: flex; flex-direction: column; gap: 1px; }
 .row {

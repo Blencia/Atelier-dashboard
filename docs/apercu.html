@@ -287,6 +287,16 @@ body.is-editing .ruler { display: grid; }
 }
 .widget:hover { border-color: color-mix(in srgb, var(--rule) 60%, var(--graphite-3)); }
 
+/* Couleur par module : même structure (fond translucide + bordure 1px) que
+   le style par défaut, juste teintée par --widget-accent choisi dans les
+   réglages du module. */
+.widget.has-accent {
+  background: color-mix(in srgb, var(--widget-accent) 9%, var(--panel) 91%);
+  border-color: color-mix(in srgb, var(--widget-accent) 45%, var(--rule));
+}
+.widget.has-accent:hover { border-color: color-mix(in srgb, var(--widget-accent) 65%, var(--rule)); }
+.widget.has-accent .widget-head { border-bottom-color: color-mix(in srgb, var(--widget-accent) 25%, var(--rule-soft)); }
+
 .widget-head {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 12px;
@@ -395,6 +405,7 @@ body.is-editing .handle { display: block; }
   overflow: hidden; word-break: break-word;
 }
 body[data-labels="off"] .tile span.label { display: none; }
+.tile.is-icon-only { justify-content: center; padding-top: 14px; padding-bottom: 14px; }
 
 .bm-list { display: flex; flex-direction: column; gap: 1px; }
 .row {
@@ -1015,12 +1026,12 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
       {
         id: 'b1', name: 'Principal', theme: null,
         widgets: [
-          { id: 'w1', type: 'bookmarks', w: 5, h: 3, settings: { folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev', view: 'tiles', tile: 78, icon: 26, sort: 'manual', limit: 0, openIn: 'current', showCrumbs: true } },
+          { id: 'w1', type: 'bookmarks', w: 5, h: 3, color: '#8b9dff', settings: { folderId: byTitle('Dev'), folderPath: 'Barre de favoris / Dev', view: 'tiles', tile: 78, icon: 26, sort: 'manual', limit: 0, openIn: 'current', showCrumbs: true } },
           { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false, tz2: 'Europe/Paris', tz2Label: 'Paris' } },
           { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
           { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
-          { id: 'w6', type: 'bookmarks', w: 3, h: 2, settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'compact', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w6', type: 'bookmarks', w: 3, h: 2, color: '#f97362', settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'icons', tile: 64, icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
           { id: 'w8', type: 'folder', w: 2, h: 1, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients' } },
           { id: 'w9', type: 'countdown', w: 3, h: 1, settings: { label: 'Réveillon', target: '2026-12-24T18:00', doneText: 'Joyeux Noël !' } },
@@ -1171,6 +1182,7 @@ function makeWidget(type, settings = {}, size = {}) {
     type,
     w: size.w ?? 3,
     h: size.h ?? 2,
+    color: null,
     settings,
   };
 }
@@ -1183,6 +1195,7 @@ function sanitizeWidgets(list) {
       type: w.type,
       w: clamp(+w.w || 3, 1, 12),
       h: clamp(+w.h || 2, 1, 6),
+      color: typeof w.color === 'string' && /^#[0-9a-f]{6}$/i.test(w.color) ? w.color : null,
       settings: w.settings && typeof w.settings === 'object' ? w.settings : {},
     }));
 }
@@ -1825,6 +1838,48 @@ async function openWidgetSettings(widgetId) {
     await store.patchSettings(widget.id, values);
   }));
 
+  body.append(el('p', { class: 'section-label', text: 'Couleur' }));
+  const colorBox = el('div');
+  const colorToggle = el('input', { type: 'checkbox', checked: !!widget.color });
+
+  const renderColorBox = () => {
+    clear(colorBox);
+    if (!colorToggle.checked) return;
+    const swatches = el('div', { class: 'swatches' });
+    const custom = el('input', { type: 'color', value: widget.color || '#e3a008' });
+    const paint = (hex) => {
+      widget.color = hex;
+      custom.value = hex;
+      [...swatches.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.hex === hex)));
+      store.patchWidget(widget.id, { color: hex });
+    };
+    for (const hex of ACCENTS) {
+      swatches.append(el('button', {
+        class: 'swatch', type: 'button', 'data-hex': hex, 'aria-label': hex,
+        'aria-pressed': String(widget.color === hex),
+        style: { background: hex }, onclick: () => paint(hex),
+      }));
+    }
+    custom.addEventListener('change', () => paint(custom.value));
+    swatches.append(custom);
+    colorBox.append(el('div', { class: 'field' }, [
+      el('label', { text: 'Couleur du module' }), swatches,
+      el('p', { class: 'field-hint', text: 'La bordure et le fond du module reprennent cette teinte, dans le même style qu\'aujourd\'hui.' }),
+    ]));
+  };
+
+  colorToggle.addEventListener('change', async () => {
+    widget.color = colorToggle.checked ? (widget.color || '#e3a008') : null;
+    await store.patchWidget(widget.id, { color: widget.color });
+    renderColorBox();
+  });
+
+  body.append(el('div', { class: 'field field-inline' }, [
+    el('label', { text: 'Couleur personnalisée pour ce module' }), colorToggle,
+  ]));
+  body.append(colorBox);
+  renderColorBox();
+
   body.append(el('p', { class: 'section-label', text: 'Dimensions' }));
   const dims = el('div', { class: 'field-row' });
   dims.append(
@@ -2354,10 +2409,12 @@ function mountFolderBrowser(body, opts) {
 
     if (!items.length) {
       body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+      wireDrop(body, body, currentId); // pas de tuiles, mais on peut quand même y déposer un favori
       return;
     }
 
-    const tiles = s.view === 'tiles';
+    const iconsOnly = s.view === 'icons';
+    const tiles = s.view === 'tiles' || iconsOnly;
     const badges = s.view === 'badges';
     const wrap = el('div', {
       class: badges ? 'bm-badges' : tiles ? 'bm-tiles' : `bm-list${s.view === 'compact' ? ' is-dense' : ''}`,
@@ -2370,10 +2427,13 @@ function mountFolderBrowser(body, opts) {
     }
 
     for (const node of items) {
-      wrap.append(node.url ? linkNode(node, tiles, badges) : folderNode(node, tiles, badges));
+      wrap.append(node.url ? linkNode(node, tiles, badges, iconsOnly) : folderNode(node, tiles, badges, iconsOnly));
     }
-    wireDrop(wrap, currentId);
     body.append(wrap);
+    // Sur `body` (toute la hauteur du module), pas juste `wrap` (taille du
+    // contenu) : sinon lâcher dans l'espace vide autour des tuiles ne
+    // déclenchait rien quand le module est plus grand que son contenu.
+    wireDrop(body, wrap, currentId);
   }
 
   /** Le voisin le plus proche du pointeur, et si on dépose avant ou après lui. */
@@ -2424,23 +2484,25 @@ function mountFolderBrowser(body, opts) {
     return true;
   }
 
-  function wireDrop(wrap, targetFolderId) {
+  /** `target` reçoit les écouteurs (toute la hauteur du module, pas juste le
+      contenu) ; `wrap` sert uniquement à calculer le voisin le plus proche. */
+  function wireDrop(target, wrap, targetFolderId) {
     let marked = null;
     const unmark = () => { marked?.classList.remove('bm-insert-target'); marked = null; };
 
-    wrap.addEventListener('dragover', (e) => {
+    target.addEventListener('dragover', (e) => {
       if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      wrap.classList.add('bm-drop-target');
+      target.classList.add('bm-drop-target');
       const { el: near } = nearestSibling(wrap, e.clientX, e.clientY);
       if (near !== marked) { unmark(); if (near) { near.classList.add('bm-insert-target'); marked = near; } }
     });
-    wrap.addEventListener('dragleave', (e) => {
-      if (e.target === wrap) { wrap.classList.remove('bm-drop-target'); unmark(); }
+    target.addEventListener('dragleave', (e) => {
+      if (e.target === target) { target.classList.remove('bm-drop-target'); unmark(); }
     });
-    wrap.addEventListener('drop', async (e) => {
-      wrap.classList.remove('bm-drop-target');
+    target.addEventListener('drop', async (e) => {
+      target.classList.remove('bm-drop-target');
       const { el: near, before } = nearestSibling(wrap, e.clientX, e.clientY);
       unmark();
       if (!isEditing()) return;
@@ -2549,13 +2611,13 @@ function mountFolderBrowser(body, opts) {
     return items;
   }
 
-  function linkNode(node, tiles, badges) {
+  function linkNode(node, tiles, badges, iconsOnly) {
     // textContent partout : un titre de favori peut contenir du HTML.
     const alias = store.data.aliases[node.id];
     const label = alias || node.title || hostOf(node.url);
     const virtual = !!store.data.folderOverride[node.id];
     const a = el('a', {
-      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       href: node.url,
       title: `${label}\n${node.url}${virtual ? '\n(classé ici dans Atelier seulement)' : ''}`,
       'data-bm-id': node.id,
@@ -2575,7 +2637,7 @@ function mountFolderBrowser(body, opts) {
       ondragend: (e) => { e.stopPropagation(); a.classList.remove('dragging-bm'); },
     });
     a.append(iconFor(node, tiles || badges));
-    if (!badges) {
+    if (!badges && !iconsOnly) {
       a.append(el('span', { class: 'label', text: label }));
       a.append(el('button', {
         class: 'bm-rename', type: 'button', title: 'Renommer (local)', text: '✎',
@@ -2586,10 +2648,10 @@ function mountFolderBrowser(body, opts) {
     return a;
   }
 
-  function folderNode(node, tiles, badges) {
+  function folderNode(node, tiles, badges, iconsOnly) {
     const virtual = !!store.data.folderOverride[node.id];
     const b = el('button', {
-      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${virtual ? ' bm-virtual' : ''}`,
+      class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
       title: virtual ? `${node.title}\n(classé ici dans Atelier seulement)` : node.title,
       style: { background: 'none', border: 0, cursor: 'pointer', font: 'inherit', width: '100%' },
@@ -2607,7 +2669,7 @@ function mountFolderBrowser(body, opts) {
       ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
     });
     b.append(el('span', { class: 'glyph', text: '▸' }));
-    if (!badges) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
+    if (!badges && !iconsOnly) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
     return b;
   }
 
@@ -2655,10 +2717,10 @@ defineWidget({
     { key: 'folderId', label: 'Dossier', type: 'folder' },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
-      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
+      options: [['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
     },
-    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
@@ -3137,10 +3199,10 @@ defineWidget({
     },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
-      options: [['tiles', 'Tuiles'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
+      options: [['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
     },
-    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'badges' },
+    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
+    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' },
     {
       key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
@@ -3442,9 +3504,10 @@ function rebuild() {
 
 function buildWidget(w) {
   const def = getWidget(w.type);
-  const node = el('article', { class: 'widget', 'data-id': w.id });
+  const node = el('article', { class: `widget${w.color ? ' has-accent' : ''}`, 'data-id': w.id });
   node.style.setProperty('--w', w.w);
   node.style.setProperty('--h', w.h);
+  if (w.color) node.style.setProperty('--widget-accent', w.color);
 
   const head = el('div', { class: 'widget-head' }, [
     el('span', { class: 'widget-title', text: def ? def.title(w) : 'Module inconnu' }),
