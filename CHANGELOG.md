@@ -6,6 +6,18 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Ajouté
+- Les modules Dossier de favoris, Dossier à onglets et Dossier n'exigent
+  plus d'assigner un vrai dossier Chrome : laisse le champ « Dossier »
+  vide et le module devient un **dossier virtuel**, un bac vide que tu
+  remplis toi-même en y glissant des favoris depuis le panneau latéral
+  (mode plan) ou un autre module. Rien n'est créé dans tes vrais favoris
+  Chrome — le classement reste entièrement local à Atelier.
+- Message d'aide dans un dossier virtuel vide, pour indiquer quoi faire.
+- La suppression d'un module libère maintenant les favoris qui y étaient
+  classés virtuellement (ils redeviennent visibles sous leur dossier réel
+  ailleurs dans Atelier, au lieu de devenir invisibles partout).
+
 ## [1.4.1] — 2026-08-20
 
 ### Corrigé

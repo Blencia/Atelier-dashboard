@@ -1,6 +1,7 @@
 import { store, makeWidget, clamp } from './store.js';
 import { allWidgets, getWidget } from './registry.js';
 import { el, clear, openModal, toast, listFolders } from './ui.js';
+import { releaseVirtualFolder } from './bmview.js';
 
 const ACCENTS = ['#e3a008', '#5eead4', '#f97362', '#8b9dff', '#b5cc4a', '#e879bd', '#9aa3af'];
 const ENGINES = [
@@ -239,7 +240,16 @@ export async function openWidgetSettings(widgetId) {
   const footer = el('div', { style: { display: 'flex', gap: '8px', width: '100%' } }, [
     el('button', {
       class: 'btn btn-danger', type: 'button', text: 'Supprimer le module',
-      onclick: async () => { await store.removeWidget(widget.id); close(); toast('Module supprimé'); },
+      onclick: async () => {
+        // Libère d'abord les favoris classés virtuellement dans ce module
+        // (et ses onglets, le cas échéant) — sinon ils deviendraient
+        // invisibles partout dans Atelier, sans plus aucune UI pour les
+        // retrouver (ils restent, eux, intacts dans les vrais favoris Chrome).
+        await releaseVirtualFolder(`atelier:${widget.id}`);
+        await store.removeWidget(widget.id);
+        close();
+        toast('Module supprimé');
+      },
     }),
     el('span', { style: { flex: '1' } }),
     el('button', { class: 'btn btn-primary', type: 'button', text: 'Fermer', onclick: () => close() }),

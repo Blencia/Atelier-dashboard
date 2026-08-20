@@ -47,6 +47,40 @@ chrome.bookmarks.onRemoved.addListener((id) => {
   if (changed) store.save({ silent: true });
 });
 
+/** Identifiant d'un dossier « virtuel » : n'existe pas dans les vrais
+    favoris Chrome, purement local à Atelier — un module Dossier sans
+    dossier Chrome assigné en fabrique un (voir virtualFolderId ci-dessous),
+    pour devenir un simple bac qu'on remplit par glisser-déposer. */
+function isVirtualFolder(id) {
+  return typeof id === 'string' && id.startsWith('atelier:');
+}
+
+/** Id stable et unique d'un dossier virtuel pour un module (et, pour Dossier
+    à onglets, un onglet précis). Jamais transmis à l'API chrome.bookmarks —
+    seulement utilisé comme clé dans folderOrder/folderOverride. */
+export function virtualFolderId(widgetId, tabId) {
+  return tabId ? `atelier:${widgetId}:${tabId}` : `atelier:${widgetId}`;
+}
+
+/** À appeler quand un module (ou un de ses onglets) est supprimé pour de bon :
+    libère les favoris qui y étaient classés virtuellement, pour qu'ils ne
+    deviennent pas invisibles partout dans Atelier (ils restent, eux, intacts
+    dans les vrais favoris Chrome — seul leur classement local est perdu ici). */
+export async function releaseVirtualFolder(prefix) {
+  let changed = false;
+  for (const [id, target] of Object.entries(store.data.folderOverride)) {
+    if (typeof target === 'string' && target.startsWith(prefix)) {
+      delete store.data.folderOverride[id];
+      changed = true;
+    }
+  }
+  for (const key of Object.keys(store.data.folderOrder)) {
+    if (key.startsWith(prefix)) { delete store.data.folderOrder[key]; changed = true; }
+  }
+  if (changed) await store.save({ silent: true });
+  refreshAllBrowsers();
+}
+
 /** Classe virtuellement `nodeId` sous `targetFolderId` (jamais un vrai
     chrome.bookmarks.move) et renvoie le nœud Chrome à jour, ou null s'il
     n'existe plus. Partagé par mountFolderBrowser et les modules simples
@@ -75,6 +109,32 @@ export async function classifyIntoFolder(nodeId, targetFolderId) {
   return true;
 }
 
+/** Enfants réellement affichés dans `folderId` : ceux de Chrome, moins ceux
+    classés virtuellement ailleurs, plus ceux classés virtuellement ici.
+    Pour un dossier virtuel (aucun dossier Chrome derrière), il n'y a pas
+    d'enfants réels — seulement ce qui a été classé ici par glisser. Exporté
+    pour être réutilisé par les modules qui n'utilisent pas
+    mountFolderBrowser (ex. Dossier compact) mais doivent quand même
+    afficher un dossier virtuel correctement. */
+export async function resolveDisplayedChildren(folderId) {
+  const overrides = store.data.folderOverride;
+  let items = [];
+  if (!isVirtualFolder(folderId)) {
+    const real = await chrome.bookmarks.getChildren(folderId);
+    items = real.filter((c) => !(overrides[c.id] && overrides[c.id] !== folderId));
+  }
+
+  const incomingIds = Object.keys(overrides).filter((id) => overrides[id] === folderId);
+  for (const id of incomingIds) {
+    if (items.some((c) => c.id === id)) continue;
+    try {
+      const [node] = await chrome.bookmarks.get(id);
+      if (node && node.parentId !== folderId) items.push(node);
+    } catch { /* favori supprimé entretemps : classement caduc, ignoré */ }
+  }
+  return items;
+}
+
 /**
  * @param {HTMLElement} body      conteneur à remplir (vidé et rempli à chaque rendu)
  * @param {object} opts
@@ -94,24 +154,6 @@ export function mountFolderBrowser(body, opts) {
   let currentWrap = null;
   let currentTargetFolderId = null;
 
-  /** Enfants réellement affichés dans `folderId` : ceux de Chrome, moins ceux
-      classés virtuellement ailleurs, plus ceux classés virtuellement ici. */
-  async function resolveChildren(folderId) {
-    const real = await chrome.bookmarks.getChildren(folderId);
-    const overrides = store.data.folderOverride;
-    const items = real.filter((c) => !(overrides[c.id] && overrides[c.id] !== folderId));
-
-    const incomingIds = Object.keys(overrides).filter((id) => overrides[id] === folderId);
-    for (const id of incomingIds) {
-      if (items.some((c) => c.id === id)) continue;
-      try {
-        const [node] = await chrome.bookmarks.get(id);
-        if (node && node.parentId !== folderId) items.push(node);
-      } catch { /* favori supprimé entretemps : classement caduc, ignoré */ }
-    }
-    return items;
-  }
-
   async function render() {
     if (!alive) return;
     clear(body);
@@ -125,7 +167,7 @@ export function mountFolderBrowser(body, opts) {
     const currentId = stack.length ? stack[stack.length - 1].id : rootId;
     let items;
     try {
-      items = await resolveChildren(currentId);
+      items = await resolveDisplayedChildren(currentId);
     } catch {
       body.append(el('p', { class: 'note', text: 'Lecture du dossier impossible.' }));
       return;
@@ -170,7 +212,12 @@ export function mountFolderBrowser(body, opts) {
     if (s.limit > 0) items = items.slice(0, s.limit);
 
     if (!items.length) {
-      body.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+      body.append(el('p', {
+        class: 'note',
+        text: isVirtualFolder(currentId) && !stack.length
+          ? 'Dossier virtuel, vide pour l\'instant — glisse un favori depuis le panneau latéral (mode plan) ou un autre module pour le classer ici.'
+          : 'Dossier vide.',
+      }));
       currentWrap = body; // pas de tuiles, mais on peut quand même y déposer un favori
       currentTargetFolderId = currentId;
       return;

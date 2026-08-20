@@ -1,6 +1,6 @@
 import { defineWidget } from '../registry.js';
 import { el, clear, findFolderByPath } from '../ui.js';
-import { mountFolderBrowser } from '../bmview.js';
+import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 
 defineWidget({
   type: 'foldertabs',
@@ -20,7 +20,7 @@ defineWidget({
   fields: [
     {
       key: 'tabs', label: 'Onglets', type: 'folderList',
-      hint: 'Chaque onglet affiche un dossier de favoris différent.',
+      hint: 'Chaque onglet affiche un dossier différent. Laisse le dossier vide pour un onglet virtuel que tu remplis toi-même par glisser-déposer.',
     },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
@@ -99,7 +99,9 @@ defineWidget({
           return found.id;
         }
       }
-      return null;
+      // Aucun dossier Chrome assigné à cet onglet : il devient un dossier
+      // virtuel propre à lui, rempli par glisser-déposer.
+      return virtualFolderId(ctx.widget.id, tab.id);
     }
 
     const browser = mountFolderBrowser(content, {

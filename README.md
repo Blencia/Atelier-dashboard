@@ -162,6 +162,17 @@ signaler, et le clic droit propose « ↩ Remettre à sa place réelle » pour
 annuler. Réordonner (tri « Ordre local ») ne touche jamais l'ordre réel dans
 Chrome non plus.
 
+### Dossiers virtuels
+
+Le champ « Dossier » des modules Dossier de favoris / Dossier à onglets /
+Dossier est optionnel. Laisse-le vide et le module devient un **dossier
+virtuel** — un bac vide identifié localement (`atelier:<id-du-module>`, une
+clé qui n'existe dans aucune vraie donnée Chrome), que tu remplis en y
+glissant des favoris depuis le panneau latéral ou un autre module. Aucun
+dossier Chrome n'est créé ni requis. Si tu supprimes un module qui contient
+des favoris classés virtuellement, ils redeviennent visibles sous leur
+dossier réel ailleurs dans Atelier plutôt que de disparaître.
+
 ## Sauvegarde
 
 Réglages → Données → **Exporter** produit un `.json` avec toute la mise en page.

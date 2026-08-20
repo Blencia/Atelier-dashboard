@@ -1,6 +1,6 @@
 import { defineWidget } from '../registry.js';
 import { el, clear, faviconUrl, hostOf, initial, openLink, findFolderByPath, openModal, isEditing, toast } from '../ui.js';
-import { DND_TYPE, classifyIntoFolder } from '../bmview.js';
+import { DND_TYPE, classifyIntoFolder, virtualFolderId, resolveDisplayedChildren } from '../bmview.js';
 
 /* Petit widget « dossier » façon écran d'accueil de téléphone : un aperçu
    réduit sur la feuille, qui s'ouvre en grille plein écran au clic. */
@@ -12,7 +12,10 @@ defineWidget({
   defaultSize: { w: 2, h: 1 },
   defaults: { folderId: null, folderPath: '', label: '' },
   fields: [
-    { key: 'folderId', label: 'Dossier', type: 'folder' },
+    {
+      key: 'folderId', label: 'Dossier', type: 'folder',
+      hint: 'Optionnel — laisse vide pour un dossier virtuel que tu remplis toi-même par glisser-déposer.',
+    },
     { key: 'label', label: 'Titre (vide = nom du dossier)', type: 'text' },
   ],
 
@@ -40,7 +43,8 @@ defineWidget({
           return found.id;
         }
       }
-      return null;
+      // Aucun dossier Chrome assigné : dossier virtuel, rempli par glisser-déposer.
+      return virtualFolderId(ctx.widget.id);
     }
 
     function thumb(node) {
@@ -64,7 +68,7 @@ defineWidget({
       }
 
       let children = [];
-      try { children = await chrome.bookmarks.getChildren(rootId); } catch { /* dossier introuvable */ }
+      try { children = await resolveDisplayedChildren(rootId); } catch { /* dossier introuvable */ }
 
       const name = s.label || s.folderPath?.split(' / ').pop() || 'Dossier';
       const preview = el('div', { class: 'folder-preview' });
@@ -129,7 +133,7 @@ function openFolderModal(rootId, title) {
     clear(crumbs);
     const currentId = stack.length ? stack[stack.length - 1].id : rootId;
     let children = [];
-    try { children = await chrome.bookmarks.getChildren(currentId); } catch { /* rien */ }
+    try { children = await resolveDisplayedChildren(currentId); } catch { /* rien */ }
 
     if (stack.length) {
       crumbs.append(el('button', { type: 'button', text: '← racine', onclick: () => { stack = []; draw(); } }));
@@ -145,7 +149,12 @@ function openFolderModal(rootId, title) {
     for (const node of children) {
       grid.append(node.url ? linkTile(node) : folderTile(node));
     }
-    if (!children.length) grid.append(el('p', { class: 'note', text: 'Dossier vide.' }));
+    if (!children.length) {
+      const text = currentId.startsWith('atelier:') && !stack.length
+        ? 'Dossier virtuel, vide pour l\'instant — glisse un favori du panneau latéral (mode plan) ou d\'un autre module pour le classer ici.'
+        : 'Dossier vide.';
+      grid.append(el('p', { class: 'note', text }));
+    }
   }
 
   function linkTile(node) {

@@ -1,6 +1,6 @@
 import { defineWidget } from '../registry.js';
 import { findFolderByPath } from '../ui.js';
-import { mountFolderBrowser } from '../bmview.js';
+import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 
 defineWidget({
   type: 'bookmarks',
@@ -19,7 +19,10 @@ defineWidget({
     showCrumbs: true,
   },
   fields: [
-    { key: 'folderId', label: 'Dossier', type: 'folder' },
+    {
+      key: 'folderId', label: 'Dossier', type: 'folder',
+      hint: 'Optionnel — laisse vide pour un dossier virtuel que tu remplis toi-même par glisser-déposer, sans toucher à un vrai dossier Chrome.',
+    },
     {
       key: 'view', label: 'Affichage', type: 'select', gates: true,
       options: [['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'], ['compact', 'Liste dense'], ['badges', 'Pastilles']],
@@ -60,7 +63,10 @@ defineWidget({
           return found.id;
         }
       }
-      return null;
+      // Aucun dossier Chrome assigné : ce module devient un dossier virtuel,
+      // un simple bac qu'on remplit par glisser-déposer (panneau latéral ou
+      // un autre module) — jamais lié à un vrai dossier Chrome.
+      return virtualFolderId(ctx.widget.id);
     }
 
     const browser = mountFolderBrowser(body, {
