@@ -1,5 +1,5 @@
 import { store, makeWidget, clamp } from './store.js';
-import { visibleWidgets, getWidget } from './registry.js';
+import { groupedVisibleWidgets, getWidget } from './registry.js';
 import { el, clear, openModal, toast, listFolders } from './ui.js';
 import { releaseVirtualFolder } from './bmview.js';
 
@@ -370,22 +370,27 @@ export async function openBoardSettings(boardId) {
    ============================================================ */
 
 export function openAddWidget() {
-  const grid = el('div', { class: 'picker' });
-  for (const def of visibleWidgets()) {
-    grid.append(el('button', {
-      type: 'button',
-      onclick: async () => {
-        const w = makeWidget(def.type, { ...def.defaults }, def.defaultSize);
-        await store.addWidget(w);
-        close();
-        if (def.fields.length) openWidgetSettings(w.id);
-      },
-    }, [
-      el('strong', { text: def.name }),
-      el('small', { text: def.blurb }),
-    ]));
+  const body = el('div');
+  for (const [, label, defs] of groupedVisibleWidgets()) {
+    body.append(el('p', { class: 'section-label', text: label }));
+    const grid = el('div', { class: 'picker' });
+    for (const def of defs) {
+      grid.append(el('button', {
+        type: 'button',
+        onclick: async () => {
+          const w = makeWidget(def.type, { ...def.defaults }, def.defaultSize);
+          await store.addWidget(w);
+          close();
+          if (def.fields.length) openWidgetSettings(w.id);
+        },
+      }, [
+        el('strong', { text: def.name }),
+        el('small', { text: def.blurb }),
+      ]));
+    }
+    body.append(grid);
   }
-  const close = openModal({ title: 'Ajouter un module', body: grid });
+  const close = openModal({ title: 'Ajouter un module', body });
 }
 
 /* ============================================================

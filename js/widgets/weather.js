@@ -20,6 +20,7 @@ function weatherIcon(code) {
 defineWidget({
   type: 'weather',
   name: 'Météo',
+  category: 'autre',
   blurb: 'Température et conditions actuelles, via Open-Meteo (aucune clé API).',
   defaultSize: { w: 3, h: 1 },
   defaults: { city: '', label: '', lat: null, lon: null, resolvedName: '', geocodedCity: '' },

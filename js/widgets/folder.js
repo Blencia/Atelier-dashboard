@@ -20,6 +20,7 @@ import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 
 const shared = {
   name: 'Dossier',
+  category: 'principal',
   blurb: 'Un dossier de favoris — tuiles, icônes, liste ou pastilles. Clic droit dedans pour créer des sous-dossiers façon écran d\'accueil de téléphone. Peut rester virtuel, rempli à la main.',
   defaultSize: { w: 4, h: 2 },
   defaults: {
@@ -33,6 +34,7 @@ const shared = {
     openIn: 'current',
     sort: 'manual',
     showCrumbs: true,
+    wrapped: false,
   },
   fields: [
     {
@@ -64,6 +66,11 @@ const shared = {
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
     { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean' },
+    {
+      key: 'wrapped', label: 'Design wrappé (contour collé aux pastilles)', type: 'boolean',
+      when: (s) => s.view === 'badges',
+      hint: 'Réduit la marge du module au minimum pour qu\'il prenne le moins de place possible autour des pastilles.',
+    },
   ],
 
   title(w) {
@@ -72,6 +79,7 @@ const shared = {
 
   mount(body, ctx) {
     const s = ctx.settings;
+    body.classList.toggle('is-wrapped', s.view === 'badges' && !!s.wrapped);
 
     async function resolveRoot() {
       if (s.folderId) {

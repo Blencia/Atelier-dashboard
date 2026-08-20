@@ -6,6 +6,7 @@ import { el, clear, faviconUrl, hostOf, initial, openLink, debounce } from '../u
 defineWidget({
   type: 'clock',
   name: 'Horloge',
+  category: 'autre',
   blurb: 'Heure et date, format québécois.',
   defaultSize: { w: 3, h: 1 },
   defaults: { seconds: false, hour12: false, date: true, label: 'Horloge', tz2: '', tz2Label: '' },
@@ -63,6 +64,7 @@ defineWidget({
 defineWidget({
   type: 'countdown',
   name: 'Compte à rebours',
+  category: 'autre',
   blurb: 'Temps restant jusqu\'à une date : rendez-vous, échéance.',
   defaultSize: { w: 3, h: 1 },
   defaults: { label: 'Compte à rebours', target: '', doneText: 'C\'est aujourd\'hui !' },
@@ -109,6 +111,7 @@ defineWidget({
 defineWidget({
   type: 'notes',
   name: 'Bloc-notes',
+  category: 'productivite',
   blurb: 'Un carré de texte sauvegardé automatiquement.',
   defaultSize: { w: 3, h: 2 },
   defaults: { label: 'Notes', text: '' },
@@ -137,6 +140,7 @@ defineWidget({
 defineWidget({
   type: 'topsites',
   name: 'Sites fréquents',
+  category: 'autre',
   blurb: 'Les sites que Chrome te voit visiter le plus.',
   defaultSize: { w: 4, h: 2 },
   defaults: { limit: 10, view: 'tiles', tile: 76, icon: 26, openIn: 'current' },

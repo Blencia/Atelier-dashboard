@@ -6,6 +6,22 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Ajouté
+- Vue Pastilles du module Dossier : nouvelle option **Design wrappé**, qui
+  réduit la marge du module au minimum pour qu'il prenne le moins de place
+  possible autour des pastilles.
+- « Ajouter un module » regroupe maintenant les modules par catégorie —
+  Principal (Dossier, Dossier à onglets), Productivité (Bloc-notes), Autre
+  (Horloge, Compte à rebours, Sites fréquents, Météo). Les futurs modules
+  se classeront au fur et à mesure dans la bonne catégorie.
+
+### Retiré
+- Module « Outils Google » retiré complètement (plus dans le sélecteur, le
+  code est supprimé). Un module déjà présent sur ton tableau de bord
+  n'empêche rien de fonctionner mais n'affiche plus rien — retire-le et
+  remplace-le au besoin par un module Dossier pointant vers ce dont tu as
+  besoin.
+
 ## [1.7.0] — 2026-08-20
 
 ### Modifié

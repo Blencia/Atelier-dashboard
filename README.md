@@ -88,15 +88,13 @@ js/ui.js               helpers DOM, favicons, arbre des favoris, modale
 js/settings.js         formulaires générés à partir d'un schéma
 js/app.js              thème, rendu, drag, resize, onglets, recherche, raccourcis
 js/bmview.js            navigateur de dossier partagé : tuiles/liste/icônes/pastilles,
-                        icône compacte + grille en modale, sous-dossiers virtuels,
-                        glisser entre modules, alias, clic droit — utilisé par
-                        Dossier et Dossier à onglets
+                        sous-dossiers virtuels (icône compacte + grille en
+                        modale), glisser entre modules, alias, clic droit —
+                        utilisé par Dossier et Dossier à onglets
 js/sidepanel.js         panneau latéral « Tous les favoris », visible en mode plan
-js/widgets/folder.js       dossier de favoris — tuiles/liste/icônes/pastilles ou
-                        icône compacte façon écran d'accueil, grille en modale
+js/widgets/folder.js       dossier de favoris — tuiles/liste/icônes/pastilles
 js/widgets/foldertabs.js   plusieurs dossiers dans un seul module, avec onglets
 js/widgets/misc.js       horloge (+ second fuseau), bloc-notes, sites fréquents, compte à rebours
-js/widgets/googletools.js  raccourcis vers les outils Google
 js/widgets/weather.js      météo (Open-Meteo, seul module avec appel réseau)
 ```
 
@@ -111,6 +109,7 @@ import { el, clear } from '../ui.js';
 defineWidget({
   type: 'meteo',                       // identifiant stable, stocké dans la config
   name: 'Météo',
+  category: 'autre',                   // groupe dans « Ajouter un module », voir CATEGORIES dans registry.js
   blurb: 'Température du jour.',
   defaultSize: { w: 3, h: 1 },
   defaults: { ville: 'Saint-Hippolyte' },

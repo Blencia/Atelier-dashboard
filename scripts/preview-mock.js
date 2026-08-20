@@ -110,7 +110,7 @@
           { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false, tz2: 'Europe/Paris', tz2Label: 'Paris' } },
           { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
-          { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true, wrapped: true } },
           { id: 'w6', type: 'bookmarks', w: 3, h: 2, color: '#f97362', settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'icons', tile: 64, icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
           { id: 'w8', type: 'folder', w: 3, h: 2, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'icons', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
@@ -131,7 +131,6 @@
       {
         id: 'b2', name: 'Streaming', theme: { mode: 'dark', accent: '#8b9dff' },
         widgets: [
-          { id: 'w10', type: 'googletools', w: 4, h: 2, settings: { view: 'tiles', tile: 76, icon: 26, openIn: 'new' } },
           { id: 'w11', type: 'weather', w: 3, h: 1, settings: { city: 'Montréal, QC', label: '' } },
           { id: 'w12', type: 'clock', w: 3, h: 1, settings: { label: 'Horloge', date: true, seconds: false, hour12: false } },
         ],

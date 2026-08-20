@@ -324,6 +324,11 @@ body.is-editing .widget-tools { display: flex; }
 .widget-body::-webkit-scrollbar { width: 8px; }
 .widget-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 8px; }
 
+/* Vue Pastilles, réglage « Design wrappé » : la marge du module est réduite
+   au minimum pour que son contour colle aux pastilles. */
+.widget-body.is-wrapped { padding: 4px; }
+.widget-body.is-wrapped .bm-badges { gap: 4px; }
+
 /* Mode plan : coins d'équerre + poignée */
 body.is-editing .widget {
   cursor: default;

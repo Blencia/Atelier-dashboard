@@ -331,6 +331,11 @@ body.is-editing .widget-tools { display: flex; }
 .widget-body::-webkit-scrollbar { width: 8px; }
 .widget-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 8px; }
 
+/* Vue Pastilles, réglage « Design wrappé » : la marge du module est réduite
+   au minimum pour que son contour colle aux pastilles. */
+.widget-body.is-wrapped { padding: 4px; }
+.widget-body.is-wrapped .bm-badges { gap: 4px; }
+
 /* Mode plan : coins d'équerre + poignée */
 body.is-editing .widget {
   cursor: default;
@@ -1100,7 +1105,7 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
           { id: 'w2', type: 'bookmarks', w: 4, h: 3, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', view: 'list', sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w3', type: 'clock', w: 3, h: 1, settings: { label: 'Laval', date: true, seconds: false, hour12: false, tz2: 'Europe/Paris', tz2Label: 'Paris' } },
           { id: 'w4', type: 'notes', w: 3, h: 2, settings: { label: 'À faire', text: '— Repasser sur le calculateur de financement\n— Relancer pour les visuels\n— Tester le webhook SureCart' } },
-          { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
+          { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true, wrapped: true } },
           { id: 'w6', type: 'bookmarks', w: 3, h: 2, color: '#f97362', settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'icons', tile: 64, icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
           { id: 'w8', type: 'folder', w: 3, h: 2, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'icons', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
@@ -1121,7 +1126,6 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
       {
         id: 'b2', name: 'Streaming', theme: { mode: 'dark', accent: '#8b9dff' },
         widgets: [
-          { id: 'w10', type: 'googletools', w: 4, h: 2, settings: { view: 'tiles', tile: 76, icon: 26, openIn: 'new' } },
           { id: 'w11', type: 'weather', w: 3, h: 1, settings: { city: 'Montréal, QC', label: '' } },
           { id: 'w12', type: 'clock', w: 3, h: 1, settings: { label: 'Horloge', date: true, seconds: false, hour12: false } },
         ],
@@ -1530,11 +1534,22 @@ const store = {
 
 const defs = new Map();
 
+/** Catégories affichées dans « Ajouter un module », dans cet ordre. Un
+    module sans `category` reconnue tombe dans « Autre ». La liste est
+    appelée à grandir au fil des nouveaux modules — voir groupedVisibleWidgets. */
+const CATEGORIES = [
+  ['principal', 'Principal'],
+  ['productivite', 'Productivité'],
+  ['autre', 'Autre'],
+];
+const DEFAULT_CATEGORY = 'autre';
+
 /**
  * @param {object} def
  * @param {string} def.type            identifiant stable, stocké dans la config
  * @param {string} def.name            nom affiché dans « Ajouter un module »
  * @param {string} def.blurb           une ligne de description
+ * @param {string} [def.category]      groupe dans « Ajouter un module », voir CATEGORIES
  * @param {{w:number,h:number}} def.defaultSize
  * @param {object} def.defaults        réglages par défaut
  * @param {Array}  def.fields          schéma du formulaire de réglages
@@ -1547,6 +1562,7 @@ function defineWidget(def) {
     defaultSize: { w: 3, h: 2 },
     defaults: {},
     fields: [],
+    category: DEFAULT_CATEGORY,
     title: (w) => def.name,
     ...def,
   });
@@ -1557,6 +1573,14 @@ const allWidgets = () => [...defs.values()];
 /** Comme allWidgets(), sans les types cachés (alias gardés pour compatibilité
     arrière — ex. l'ancien type "bookmarks", fusionné dans "folder"). */
 const visibleWidgets = () => [...defs.values()].filter((d) => !d.hidden);
+/** visibleWidgets(), regroupés par catégorie dans l'ordre de CATEGORIES —
+    pour « Ajouter un module ». Les catégories sans module visible sont omises. */
+function groupedVisibleWidgets() {
+  const visible = visibleWidgets();
+  return CATEGORIES
+    .map(([key, label]) => [key, label, visible.filter((d) => (d.category || DEFAULT_CATEGORY) === key)])
+    .filter(([, , list]) => list.length);
+}
 
 /* ==== js/ui.js ==== */
 /* Petits utilitaires partagés. Rien ici ne connaît la config. */
@@ -2148,22 +2172,27 @@ async function openBoardSettings(boardId) {
    ============================================================ */
 
 function openAddWidget() {
-  const grid = el('div', { class: 'picker' });
-  for (const def of visibleWidgets()) {
-    grid.append(el('button', {
-      type: 'button',
-      onclick: async () => {
-        const w = makeWidget(def.type, { ...def.defaults }, def.defaultSize);
-        await store.addWidget(w);
-        close();
-        if (def.fields.length) openWidgetSettings(w.id);
-      },
-    }, [
-      el('strong', { text: def.name }),
-      el('small', { text: def.blurb }),
-    ]));
+  const body = el('div');
+  for (const [, label, defs] of groupedVisibleWidgets()) {
+    body.append(el('p', { class: 'section-label', text: label }));
+    const grid = el('div', { class: 'picker' });
+    for (const def of defs) {
+      grid.append(el('button', {
+        type: 'button',
+        onclick: async () => {
+          const w = makeWidget(def.type, { ...def.defaults }, def.defaultSize);
+          await store.addWidget(w);
+          close();
+          if (def.fields.length) openWidgetSettings(w.id);
+        },
+      }, [
+        el('strong', { text: def.name }),
+        el('small', { text: def.blurb }),
+      ]));
+    }
+    body.append(grid);
   }
-  const close = openModal({ title: 'Ajouter un module', body: grid });
+  const close = openModal({ title: 'Ajouter un module', body });
 }
 
 /* ============================================================
@@ -3275,6 +3304,7 @@ function hideSidePanel() {
 
 const shared = {
   name: 'Dossier',
+  category: 'principal',
   blurb: 'Un dossier de favoris — tuiles, icônes, liste ou pastilles. Clic droit dedans pour créer des sous-dossiers façon écran d\'accueil de téléphone. Peut rester virtuel, rempli à la main.',
   defaultSize: { w: 4, h: 2 },
   defaults: {
@@ -3288,6 +3318,7 @@ const shared = {
     openIn: 'current',
     sort: 'manual',
     showCrumbs: true,
+    wrapped: false,
   },
   fields: [
     {
@@ -3319,6 +3350,11 @@ const shared = {
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
     { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean' },
+    {
+      key: 'wrapped', label: 'Design wrappé (contour collé aux pastilles)', type: 'boolean',
+      when: (s) => s.view === 'badges',
+      hint: 'Réduit la marge du module au minimum pour qu\'il prenne le moins de place possible autour des pastilles.',
+    },
   ],
 
   title(w) {
@@ -3327,6 +3363,7 @@ const shared = {
 
   mount(body, ctx) {
     const s = ctx.settings;
+    body.classList.toggle('is-wrapped', s.view === 'badges' && !!s.wrapped);
 
     async function resolveRoot() {
       if (s.folderId) {
@@ -3365,6 +3402,7 @@ defineWidget({ ...shared, type: 'bookmarks', hidden: true });
 defineWidget({
   type: 'clock',
   name: 'Horloge',
+  category: 'autre',
   blurb: 'Heure et date, format québécois.',
   defaultSize: { w: 3, h: 1 },
   defaults: { seconds: false, hour12: false, date: true, label: 'Horloge', tz2: '', tz2Label: '' },
@@ -3422,6 +3460,7 @@ defineWidget({
 defineWidget({
   type: 'countdown',
   name: 'Compte à rebours',
+  category: 'autre',
   blurb: 'Temps restant jusqu\'à une date : rendez-vous, échéance.',
   defaultSize: { w: 3, h: 1 },
   defaults: { label: 'Compte à rebours', target: '', doneText: 'C\'est aujourd\'hui !' },
@@ -3468,6 +3507,7 @@ defineWidget({
 defineWidget({
   type: 'notes',
   name: 'Bloc-notes',
+  category: 'productivite',
   blurb: 'Un carré de texte sauvegardé automatiquement.',
   defaultSize: { w: 3, h: 2 },
   defaults: { label: 'Notes', text: '' },
@@ -3496,6 +3536,7 @@ defineWidget({
 defineWidget({
   type: 'topsites',
   name: 'Sites fréquents',
+  category: 'autre',
   blurb: 'Les sites que Chrome te voit visiter le plus.',
   defaultSize: { w: 4, h: 2 },
   defaults: { limit: 10, view: 'tiles', tile: 76, icon: 26, openIn: 'current' },
@@ -3556,76 +3597,11 @@ defineWidget({
   },
 });
 
-/* ==== js/widgets/googletools.js ==== */
-/* Liste fixe : pas d'appel réseau, juste des liens vers les outils Google usuels. */
-const TOOLS = [
-  ['Gmail', 'https://mail.google.com/'],
-  ['Agenda', 'https://calendar.google.com/'],
-  ['Drive', 'https://drive.google.com/'],
-  ['Docs', 'https://docs.google.com/document/u/0/'],
-  ['Sheets', 'https://docs.google.com/spreadsheets/u/0/'],
-  ['Slides', 'https://docs.google.com/presentation/u/0/'],
-  ['Meet', 'https://meet.google.com/'],
-  ['Photos', 'https://photos.google.com/'],
-  ['Maps', 'https://maps.google.com/'],
-  ['Keep', 'https://keep.google.com/'],
-  ['Traduction', 'https://translate.google.com/'],
-  ['Actualités', 'https://news.google.com/'],
-];
-
-defineWidget({
-  type: 'googletools',
-  name: 'Outils Google',
-  blurb: 'Raccourcis vers Gmail, Drive, Agenda, etc. Aucune donnée transmise par l\'extension.',
-  defaultSize: { w: 4, h: 2 },
-  defaults: { view: 'tiles', tile: 76, icon: 26, openIn: 'current' },
-  fields: [
-    { key: 'view', label: 'Affichage', type: 'select', gates: true, options: [['tiles', 'Tuiles'], ['list', 'Liste']] },
-    { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' },
-    { key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2, when: (s) => s.view === 'tiles' },
-    {
-      key: 'openIn', label: 'Ouvrir les liens', type: 'select',
-      options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
-    },
-  ],
-  title: () => 'Outils Google',
-
-  mount(body, ctx) {
-    const s = ctx.settings;
-    const tiles = s.view === 'tiles';
-    const wrap = el('div', { class: tiles ? 'bm-tiles' : 'bm-list' });
-    if (tiles) {
-      wrap.style.setProperty('--tile', `${s.tile}px`);
-      wrap.style.setProperty('--icon', `${s.icon}px`);
-    }
-
-    for (const [label, url] of TOOLS) {
-      const a = el('a', {
-        class: tiles ? 'tile' : 'row',
-        href: url,
-        title: `${label}\n${url}`,
-        onclick: (e) => openLink(url, s.openIn, e),
-        onauxclick: (e) => openLink(url, s.openIn, e),
-      });
-      const img = el('img', { src: faviconUrl(url, tiles ? 48 : 32), alt: '', loading: 'lazy' });
-      img.addEventListener('error', () => {
-        img.replaceWith(el('span', { class: 'glyph', text: initial(label, url) }));
-      });
-      a.append(img, el('span', { class: 'label', text: label }));
-      if (!tiles) a.append(el('span', { class: 'host', text: new URL(url).hostname.replace(/^www\./, '') }));
-      wrap.append(a);
-    }
-
-    clear(body);
-    body.append(wrap);
-    return () => {};
-  },
-});
-
 /* ==== js/widgets/foldertabs.js ==== */
 defineWidget({
   type: 'foldertabs',
   name: 'Dossier à onglets',
+  category: 'principal',
   blurb: 'Plusieurs dossiers de favoris dans un seul module, avec des onglets pour basculer.',
   defaultSize: { w: 4, h: 3 },
   defaults: {
@@ -3753,6 +3729,7 @@ function weatherIcon(code) {
 defineWidget({
   type: 'weather',
   name: 'Météo',
+  category: 'autre',
   blurb: 'Température et conditions actuelles, via Open-Meteo (aucune clé API).',
   defaultSize: { w: 3, h: 1 },
   defaults: { city: '', label: '', lat: null, lon: null, resolvedName: '', geocodedCity: '' },
@@ -3831,7 +3808,6 @@ defineWidget({
 
 /* ==== js/app.js ==== */
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
-
 
 
 

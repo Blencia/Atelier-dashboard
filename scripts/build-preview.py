@@ -17,7 +17,7 @@ def flatten(rel):
 ORDER = [
     'js/store.js', 'js/registry.js', 'js/ui.js', 'js/settings.js', 'js/bmview.js', 'js/sidepanel.js',
     'js/widgets/folder.js', 'js/widgets/misc.js',
-    'js/widgets/googletools.js', 'js/widgets/foldertabs.js',
+    'js/widgets/foldertabs.js',
     'js/widgets/weather.js',
     'js/app.js',
 ]

@@ -5,6 +5,7 @@ import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 defineWidget({
   type: 'foldertabs',
   name: 'Dossier à onglets',
+  category: 'principal',
   blurb: 'Plusieurs dossiers de favoris dans un seul module, avec des onglets pour basculer.',
   defaultSize: { w: 4, h: 3 },
   defaults: {

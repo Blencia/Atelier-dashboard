@@ -6,7 +6,6 @@ import { showSidePanel, hideSidePanel } from './sidepanel.js';
 
 /* Enregistrement des modules. Ajoute ton import ici pour en brancher un nouveau. */
 import './widgets/misc.js';
-import './widgets/googletools.js';
 import './widgets/folder.js';
 import './widgets/foldertabs.js';
 import './widgets/weather.js';
