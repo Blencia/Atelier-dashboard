@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.6.0] — 2026-08-20
+
 ### Modifié
 - Fusion des modules **Dossier de favoris** et **Dossier** en un seul
   module **Dossier**. « Dossier de favoris » disparaît du sélecteur
