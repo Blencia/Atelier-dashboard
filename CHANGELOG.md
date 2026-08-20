@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.7.0] — 2026-08-20
+
 ### Modifié
 - « Icône compacte (ouvre une fenêtre) » retirée des choix d'« Affichage »
   du module Dossier lui-même — un module Dossier affiché sur la feuille
