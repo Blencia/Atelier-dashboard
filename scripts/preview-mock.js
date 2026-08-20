@@ -82,12 +82,25 @@
   /* Mise en page pré-remplie pour l'aperçu */
   const ids = Object.values(B);
   const byTitle = (t) => ids.find((n) => n.title === t && !n.url)?.id ?? null;
+  const byLinkTitle = (t) => ids.find((n) => n.title === t && n.url)?.id ?? null;
+
+  // Sous-dossier fait main (clic droit → Nouveau sous-dossier), pour montrer
+  // en démo l'icône compacte façon écran d'accueil de téléphone : deux
+  // favoris de « Clients » y sont classés virtuellement.
+  const demoSubfolderId = 'atelier:vf:demo1';
   const preset = {
     version: 2,
     theme: { mode: 'dark', accent: '#e3a008', density: 'comfy', radius: 6, showGrid: false, showLabels: true, wallpaperDim: 55 },
     layout: { cols: 12, gap: 14, row: 132, maxWidth: 1440 },
     search: { engine: 'https://www.google.com/search?q=%s', openIn: 'current' },
     aliases: {},
+    virtualFolders: {
+      [demoSubfolderId]: { name: 'Suivis de près', parent: byTitle('Clients') },
+    },
+    folderOverride: {
+      [byLinkTitle('GoBrien Production')]: demoSubfolderId,
+      [byLinkTitle('Maison Nectar')]: demoSubfolderId,
+    },
     activeBoard: 'b1',
     boards: [
       {
@@ -100,7 +113,7 @@
           { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w6', type: 'bookmarks', w: 3, h: 2, color: '#f97362', settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'icons', tile: 64, icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
-          { id: 'w8', type: 'folder', w: 2, h: 1, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'app' } },
+          { id: 'w8', type: 'folder', w: 3, h: 2, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'icons', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w9', type: 'countdown', w: 3, h: 1, settings: { label: 'Réveillon', target: '2026-12-24T18:00', doneText: 'Joyeux Noël !' } },
           {
             id: 'w13', type: 'foldertabs', w: 4, h: 3,

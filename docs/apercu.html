@@ -725,6 +725,10 @@ body[data-density="compact"] .tile { padding: 7px 4px; }
 }
 .folder-preview img, .folder-preview .glyph { width: 100%; height: 100%; border-radius: 3px; }
 .folder-slot-empty { border-radius: 3px; background: color-mix(in srgb, var(--rule) 40%, transparent); }
+/* Variante intégrée dans une tuile/ligne/pastille : sous-dossier fait main,
+   toujours en icône compacte quel que soit l'Affichage du module parent. */
+.folder-preview-mini { width: var(--fp-size, 28px); height: var(--fp-size, 28px); padding: 3px; gap: 2px; flex: none; }
+.badge .folder-preview-mini { border-radius: 50%; }
 .folder-name {
   font-size: 11px; color: var(--graphite-2);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1068,12 +1072,25 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
   /* Mise en page pré-remplie pour l'aperçu */
   const ids = Object.values(B);
   const byTitle = (t) => ids.find((n) => n.title === t && !n.url)?.id ?? null;
+  const byLinkTitle = (t) => ids.find((n) => n.title === t && n.url)?.id ?? null;
+
+  // Sous-dossier fait main (clic droit → Nouveau sous-dossier), pour montrer
+  // en démo l'icône compacte façon écran d'accueil de téléphone : deux
+  // favoris de « Clients » y sont classés virtuellement.
+  const demoSubfolderId = 'atelier:vf:demo1';
   const preset = {
     version: 2,
     theme: { mode: 'dark', accent: '#e3a008', density: 'comfy', radius: 6, showGrid: false, showLabels: true, wallpaperDim: 55 },
     layout: { cols: 12, gap: 14, row: 132, maxWidth: 1440 },
     search: { engine: 'https://www.google.com/search?q=%s', openIn: 'current' },
     aliases: {},
+    virtualFolders: {
+      [demoSubfolderId]: { name: 'Suivis de près', parent: byTitle('Clients') },
+    },
+    folderOverride: {
+      [byLinkTitle('GoBrien Production')]: demoSubfolderId,
+      [byLinkTitle('Maison Nectar')]: demoSubfolderId,
+    },
     activeBoard: 'b1',
     boards: [
       {
@@ -1086,7 +1103,7 @@ body.is-editing .widget-body.bm-dnd { pointer-events: auto; opacity: 1; }
           { id: 'w5', type: 'bookmarks', w: 4, h: 2, settings: { folderId: byTitle('Outils'), folderPath: 'Barre de favoris / Outils', view: 'badges', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w6', type: 'bookmarks', w: 3, h: 2, color: '#f97362', settings: { folderId: byTitle('Veille IA'), folderPath: 'Barre de favoris / Veille IA', view: 'icons', tile: 64, icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w7', type: 'topsites', w: 5, h: 2, settings: { limit: 8, view: 'tiles', tile: 74, icon: 26, openIn: 'current' } },
-          { id: 'w8', type: 'folder', w: 2, h: 1, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'app' } },
+          { id: 'w8', type: 'folder', w: 3, h: 2, settings: { folderId: byTitle('Clients'), folderPath: 'Barre de favoris / Clients', label: 'Clients', view: 'icons', icon: 30, sort: 'manual', limit: 0, openIn: 'new', showCrumbs: true } },
           { id: 'w9', type: 'countdown', w: 3, h: 1, settings: { label: 'Réveillon', target: '2026-12-24T18:00', doneText: 'Joyeux Noël !' } },
           {
             id: 'w13', type: 'foldertabs', w: 4, h: 3,
@@ -2397,10 +2414,13 @@ function downscale(file, maxW, quality) {
 
 /* ==== js/bmview.js ==== */
 /* Navigateur de dossier de favoris réutilisable : tuiles/liste/icônes seules/
-   pastilles/icône compacte, sous-dossiers (réels ou créés à la main),
-   glisser vers un autre module, alias local, menu clic droit
-   (renommer/détails). Utilisé par les modules Dossier et Dossier à onglets
-   — voir js/widgets/folder.js et js/widgets/foldertabs.js.
+   pastilles, sous-dossiers réels (navigation inline) et sous-dossiers créés
+   à la main (clic droit → Nouveau sous-dossier — toujours affichés en icône
+   compacte façon écran d'accueil de téléphone, quel que soit l'Affichage du
+   module, et acceptent un favori déposé directement dessus), glisser vers
+   un autre module, alias local, menu clic droit (renommer/détails). Utilisé
+   par les modules Dossier et Dossier à onglets — voir js/widgets/folder.js
+   et js/widgets/foldertabs.js.
 
    IMPORTANT — organisation virtuelle : Atelier NE modifie JAMAIS tes vrais
    favoris Chrome (ni leur ordre, ni leur dossier). Le contenu (existence,
@@ -2698,6 +2718,23 @@ function mountFolderBrowser(body, opts) {
     return img;
   }
 
+  /** Mini aperçu (façon écran d'accueil) d'un sous-dossier fait main, utilisé
+      à la place du simple glyphe « ▸ » partout où folderNode l'affiche —
+      tuiles, liste, pastilles. Rempli de façon asynchrone (folderNode est
+      synchrone) : 4 emplacements vides d'abord, puis remplacés dès que le
+      contenu du sous-dossier est connu. */
+  function folderPreviewMini(folderId, size) {
+    const preview = el('div', { class: 'folder-preview folder-preview-mini' });
+    preview.style.setProperty('--fp-size', `${size}px`);
+    for (let i = 0; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+    resolveDisplayedChildren(folderId).then((children) => {
+      clear(preview);
+      children.slice(0, 4).forEach((n) => preview.append(n.url ? appThumb(n) : el('span', { class: 'glyph', text: '📁' })));
+      for (let i = children.length; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+    }).catch(() => {});
+    return preview;
+  }
+
   /** Grille plein écran, façon écran d'accueil, avec sa propre navigation
       dans les sous-dossiers — réutilise linkNode/folderNode : même
       glisser-sortant, alias, clic droit que la vue inline. */
@@ -2714,6 +2751,26 @@ function mountFolderBrowser(body, opts) {
       openContextMenu(e.clientX, e.clientY, [
         { label: '+ Nouveau sous-dossier', onClick: () => createSubfolder(modalCurrentId) },
       ]);
+    });
+
+    // Dépose un favori glissé (panneau latéral, autre module) directement
+    // dans le dossier actuellement ouvert dans cette fenêtre.
+    grid.addEventListener('dragover', (e) => {
+      if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.classList.add('bm-drop-target');
+    });
+    grid.addEventListener('dragleave', (e) => { if (e.target === grid) grid.classList.remove('bm-drop-target'); });
+    grid.addEventListener('drop', async (e) => {
+      grid.classList.remove('bm-drop-target');
+      if (!isEditing()) return;
+      const bmId = e.dataTransfer.getData(DND_TYPE);
+      if (!bmId) return;
+      e.preventDefault();
+      const ok = await classifyIntoFolder(bmId, modalCurrentId);
+      if (ok) { toast('Classé ici — les vrais favoris Chrome ne sont pas touchés'); draw(); }
+      else toast('Déplacement impossible');
     });
 
     async function draw() {
@@ -3013,12 +3070,16 @@ function mountFolderBrowser(body, opts) {
     return a;
   }
 
-  /** `onOpen` : par défaut, navigue dans la liste inline (stack/render).
-      La modale du mode « Icône compacte » passe sa propre navigation. */
+  /** Un sous-dossier fait main (clic droit → Nouveau sous-dossier) s'affiche
+      toujours en icône compacte façon écran d'accueil de téléphone — aperçu
+      de son contenu, clic = fenêtre — quel que soit l'Affichage du module
+      qui le contient. `onOpen` : navigation par défaut d'un VRAI sous-dossier
+      Chrome, dans la liste inline (stack/render) ; la modale du mode « Icône
+      compacte » passe sa propre navigation pour ceux-là. */
   function folderNode(node, tiles, badges, iconsOnly, onOpen) {
-    const nav = onOpen || ((n) => { stack.push(n); render(); });
-    const virtual = !!store.data.folderOverride[node.id];
     const virtualSub = isVirtualSubfolder(node.id);
+    const nav = virtualSub ? () => openAppModal(node.id, node.title) : (onOpen || ((n) => { stack.push(n); render(); }));
+    const virtual = !!store.data.folderOverride[node.id];
     const b = el('button', {
       class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
@@ -3037,7 +3098,32 @@ function mountFolderBrowser(body, opts) {
       },
       ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
     });
-    b.append(el('span', { class: 'glyph', text: virtualSub ? '📁' : '▸' }));
+    if (virtualSub) {
+      b.append(folderPreviewMini(node.id, badges ? s.icon : tiles ? s.icon : 20));
+      // Reçoit aussi un favori déposé directement sur son icône, sans avoir à
+      // l'ouvrir — stopPropagation pour ne pas laisser wireDrop() (câblé sur
+      // `body`) le traiter en plus comme un simple réordonnancement.
+      b.addEventListener('dragover', (e) => {
+        if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        b.classList.add('bm-insert-target');
+      });
+      b.addEventListener('dragleave', () => b.classList.remove('bm-insert-target'));
+      b.addEventListener('drop', async (e) => {
+        b.classList.remove('bm-insert-target');
+        if (!isEditing()) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId || bmId === node.id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const ok = await classifyIntoFolder(bmId, node.id);
+        toast(ok ? 'Classé dans ce sous-dossier — les vrais favoris Chrome ne sont pas touchés' : 'Déplacement impossible');
+      });
+    } else {
+      b.append(el('span', { class: 'glyph', text: '▸' }));
+    }
     if (!badges && !iconsOnly) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
     return b;
   }
@@ -3172,21 +3258,24 @@ function hideSidePanel() {
 
 /* ==== js/widgets/folder.js ==== */
 /* Widget unique pour un dossier de favoris (réel ou virtuel) : Tuiles /
-   Icônes seules / Liste / Liste dense / Pastilles pour un affichage
-   toujours visible sur la feuille, ou Icône compacte pour un aperçu façon
-   écran d'accueil de téléphone qui s'ouvre en fenêtre au clic. Peut aussi
-   rester entièrement virtuel — laisse le dossier vide et remplis-le à la
-   main par glisser-déposer (panneau latéral ou clic droit → nouveau
-   sous-dossier, voir bmview.js).
+   Icônes seules / Liste / Liste dense / Pastilles, toujours affiché sur la
+   feuille. Peut rester entièrement virtuel — laisse le dossier vide et
+   remplis-le à la main par glisser-déposer (panneau latéral ou clic droit
+   → nouveau sous-dossier, voir bmview.js). Un sous-dossier créé ainsi
+   s'affiche toujours en icône compacte façon écran d'accueil de téléphone,
+   qui s'ouvre en fenêtre au clic — ce n'est plus un réglage du widget
+   lui-même, seulement le rendu inhérent des sous-dossiers faits main.
 
    Le type "bookmarks" reste enregistré (caché du sélecteur "Ajouter un
    module", voir hidden ci-dessous) uniquement pour que les modules créés
    avant la fusion des deux anciens widgets continuent de fonctionner tels
-   quels, sans migration de données. */
+   quels, sans migration de données. Un widget déjà réglé sur l'ancienne vue
+   "app" (Icône compacte, retirée du sélecteur) continue aussi de fonctionner
+   telle quelle — voir le rendu `s.view === 'app'` dans bmview.js. */
 
 const shared = {
   name: 'Dossier',
-  blurb: 'Un dossier de favoris — tuiles, liste, ou icône compacte qui s\'ouvre en fenêtre. Peut rester virtuel, rempli à la main.',
+  blurb: 'Un dossier de favoris — tuiles, icônes, liste ou pastilles. Clic droit dedans pour créer des sous-dossiers façon écran d\'accueil de téléphone. Peut rester virtuel, rempli à la main.',
   defaultSize: { w: 4, h: 2 },
   defaults: {
     folderId: null,
@@ -3211,25 +3300,25 @@ const shared = {
       options: [
         ['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'],
         ['compact', 'Liste dense'], ['badges', 'Pastilles'],
-        ['app', 'Icône compacte (ouvre une fenêtre)'],
       ],
+      hint: 'Les sous-dossiers créés par clic droit s\'affichent toujours en icône compacte, quel que soit ce réglage.',
     },
     { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
     {
       key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2,
-      when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' || s.view === 'app',
+      when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges',
     },
     {
-      key: 'sort', label: 'Tri', type: 'select', when: (s) => s.view !== 'app',
+      key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
       hint: 'L\'ordre local est propre à Atelier — il ne change jamais l\'ordre réel dans Chrome.',
     },
-    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200, when: (s) => s.view !== 'app' },
+    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200 },
     {
       key: 'openIn', label: 'Ouvrir les liens', type: 'select',
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
-    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean', when: (s) => s.view !== 'app' },
+    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean' },
   ],
 
   title(w) {

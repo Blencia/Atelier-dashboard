@@ -175,13 +175,17 @@ virtuellement, ils redeviennent visibles sous leur dossier réel ailleurs
 dans Atelier plutôt que de disparaître.
 
 Dans n'importe quel dossier (réel ou virtuel), le clic droit sur un espace
-vide propose **+ Nouveau sous-dossier** : un sous-dossier fait main, avec
-son propre style façon dossier d'écran d'accueil de téléphone, disponible
-en mode tuiles/liste comme en mode Icône compacte. Se renomme et se
-supprime via son propre clic droit ; le supprimer libère les favoris qu'il
-contenait plutôt que de les faire disparaître. Comme le reste de
-l'organisation locale, ces sous-dossiers n'existent que dans Atelier —
-jamais créés dans tes vrais favoris Chrome.
+vide propose **+ Nouveau sous-dossier** : un sous-dossier fait main qui
+s'affiche toujours en icône compacte façon écran d'accueil de téléphone —
+un aperçu de son contenu (jusqu'à 4 icônes), quel que soit l'Affichage du
+module qui le contient — et qui s'ouvre en fenêtre au clic. Glisse un
+favori directement sur son icône (depuis le panneau latéral ou un autre
+module) pour le classer dedans sans avoir à l'ouvrir ; la fenêtre elle-même
+accepte aussi un dépôt direct. Se renomme et se supprime via son propre
+clic droit ; le supprimer libère les favoris qu'il contenait plutôt que de
+les faire disparaître. Comme le reste de l'organisation locale, ces
+sous-dossiers n'existent que dans Atelier — jamais créés dans tes vrais
+favoris Chrome.
 
 ## Sauvegarde
 

@@ -5,10 +5,13 @@ import {
 } from './ui.js';
 
 /* Navigateur de dossier de favoris réutilisable : tuiles/liste/icônes seules/
-   pastilles/icône compacte, sous-dossiers (réels ou créés à la main),
-   glisser vers un autre module, alias local, menu clic droit
-   (renommer/détails). Utilisé par les modules Dossier et Dossier à onglets
-   — voir js/widgets/folder.js et js/widgets/foldertabs.js.
+   pastilles, sous-dossiers réels (navigation inline) et sous-dossiers créés
+   à la main (clic droit → Nouveau sous-dossier — toujours affichés en icône
+   compacte façon écran d'accueil de téléphone, quel que soit l'Affichage du
+   module, et acceptent un favori déposé directement dessus), glisser vers
+   un autre module, alias local, menu clic droit (renommer/détails). Utilisé
+   par les modules Dossier et Dossier à onglets — voir js/widgets/folder.js
+   et js/widgets/foldertabs.js.
 
    IMPORTANT — organisation virtuelle : Atelier NE modifie JAMAIS tes vrais
    favoris Chrome (ni leur ordre, ni leur dossier). Le contenu (existence,
@@ -306,6 +309,23 @@ export function mountFolderBrowser(body, opts) {
     return img;
   }
 
+  /** Mini aperçu (façon écran d'accueil) d'un sous-dossier fait main, utilisé
+      à la place du simple glyphe « ▸ » partout où folderNode l'affiche —
+      tuiles, liste, pastilles. Rempli de façon asynchrone (folderNode est
+      synchrone) : 4 emplacements vides d'abord, puis remplacés dès que le
+      contenu du sous-dossier est connu. */
+  function folderPreviewMini(folderId, size) {
+    const preview = el('div', { class: 'folder-preview folder-preview-mini' });
+    preview.style.setProperty('--fp-size', `${size}px`);
+    for (let i = 0; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+    resolveDisplayedChildren(folderId).then((children) => {
+      clear(preview);
+      children.slice(0, 4).forEach((n) => preview.append(n.url ? appThumb(n) : el('span', { class: 'glyph', text: '📁' })));
+      for (let i = children.length; i < 4; i++) preview.append(el('span', { class: 'folder-slot-empty' }));
+    }).catch(() => {});
+    return preview;
+  }
+
   /** Grille plein écran, façon écran d'accueil, avec sa propre navigation
       dans les sous-dossiers — réutilise linkNode/folderNode : même
       glisser-sortant, alias, clic droit que la vue inline. */
@@ -322,6 +342,26 @@ export function mountFolderBrowser(body, opts) {
       openContextMenu(e.clientX, e.clientY, [
         { label: '+ Nouveau sous-dossier', onClick: () => createSubfolder(modalCurrentId) },
       ]);
+    });
+
+    // Dépose un favori glissé (panneau latéral, autre module) directement
+    // dans le dossier actuellement ouvert dans cette fenêtre.
+    grid.addEventListener('dragover', (e) => {
+      if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.classList.add('bm-drop-target');
+    });
+    grid.addEventListener('dragleave', (e) => { if (e.target === grid) grid.classList.remove('bm-drop-target'); });
+    grid.addEventListener('drop', async (e) => {
+      grid.classList.remove('bm-drop-target');
+      if (!isEditing()) return;
+      const bmId = e.dataTransfer.getData(DND_TYPE);
+      if (!bmId) return;
+      e.preventDefault();
+      const ok = await classifyIntoFolder(bmId, modalCurrentId);
+      if (ok) { toast('Classé ici — les vrais favoris Chrome ne sont pas touchés'); draw(); }
+      else toast('Déplacement impossible');
     });
 
     async function draw() {
@@ -621,12 +661,16 @@ export function mountFolderBrowser(body, opts) {
     return a;
   }
 
-  /** `onOpen` : par défaut, navigue dans la liste inline (stack/render).
-      La modale du mode « Icône compacte » passe sa propre navigation. */
+  /** Un sous-dossier fait main (clic droit → Nouveau sous-dossier) s'affiche
+      toujours en icône compacte façon écran d'accueil de téléphone — aperçu
+      de son contenu, clic = fenêtre — quel que soit l'Affichage du module
+      qui le contient. `onOpen` : navigation par défaut d'un VRAI sous-dossier
+      Chrome, dans la liste inline (stack/render) ; la modale du mode « Icône
+      compacte » passe sa propre navigation pour ceux-là. */
   function folderNode(node, tiles, badges, iconsOnly, onOpen) {
-    const nav = onOpen || ((n) => { stack.push(n); render(); });
-    const virtual = !!store.data.folderOverride[node.id];
     const virtualSub = isVirtualSubfolder(node.id);
+    const nav = virtualSub ? () => openAppModal(node.id, node.title) : (onOpen || ((n) => { stack.push(n); render(); }));
+    const virtual = !!store.data.folderOverride[node.id];
     const b = el('button', {
       class: `${badges ? 'badge' : tiles ? 'tile' : 'row'}${iconsOnly ? ' is-icon-only' : ''}${virtual ? ' bm-virtual' : ''}`,
       type: 'button',
@@ -645,7 +689,32 @@ export function mountFolderBrowser(body, opts) {
       },
       ondragend: (e) => { e.stopPropagation(); b.classList.remove('dragging-bm'); },
     });
-    b.append(el('span', { class: 'glyph', text: virtualSub ? '📁' : '▸' }));
+    if (virtualSub) {
+      b.append(folderPreviewMini(node.id, badges ? s.icon : tiles ? s.icon : 20));
+      // Reçoit aussi un favori déposé directement sur son icône, sans avoir à
+      // l'ouvrir — stopPropagation pour ne pas laisser wireDrop() (câblé sur
+      // `body`) le traiter en plus comme un simple réordonnancement.
+      b.addEventListener('dragover', (e) => {
+        if (!isEditing() || !e.dataTransfer.types.includes(DND_TYPE)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        b.classList.add('bm-insert-target');
+      });
+      b.addEventListener('dragleave', () => b.classList.remove('bm-insert-target'));
+      b.addEventListener('drop', async (e) => {
+        b.classList.remove('bm-insert-target');
+        if (!isEditing()) return;
+        const bmId = e.dataTransfer.getData(DND_TYPE);
+        if (!bmId || bmId === node.id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const ok = await classifyIntoFolder(bmId, node.id);
+        toast(ok ? 'Classé dans ce sous-dossier — les vrais favoris Chrome ne sont pas touchés' : 'Déplacement impossible');
+      });
+    } else {
+      b.append(el('span', { class: 'glyph', text: '▸' }));
+    }
     if (!badges && !iconsOnly) b.append(el('span', { class: 'label', text: node.title || '(sans nom)' }));
     return b;
   }

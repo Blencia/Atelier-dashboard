@@ -6,6 +6,22 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Modifié
+- « Icône compacte (ouvre une fenêtre) » retirée des choix d'« Affichage »
+  du module Dossier lui-même — un module Dossier affiché sur la feuille
+  reste toujours en tuiles/icônes/liste/pastilles. Ce rendu compact devient
+  entièrement automatique pour les **sous-dossiers** créés par clic droit
+  (voir ci-dessous), qui l'utilisent toujours, quel que soit l'Affichage
+  du module qui les contient.
+
+### Ajouté
+- Sous-dossier créé par clic droit → + Nouveau sous-dossier : affiche
+  maintenant un aperçu de son contenu (jusqu'à 4 icônes) directement sur sa
+  tuile, façon écran d'accueil de téléphone, et accepte un favori déposé
+  directement dessus (glisser depuis le panneau latéral ou un autre
+  module) — plus besoin de l'ouvrir pour y classer quelque chose. La
+  fenêtre qui s'ouvre au clic accepte elle aussi un dépôt direct.
+
 ## [1.6.0] — 2026-08-20
 
 ### Modifié

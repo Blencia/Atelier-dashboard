@@ -3,21 +3,24 @@ import { findFolderByPath } from '../ui.js';
 import { mountFolderBrowser, virtualFolderId } from '../bmview.js';
 
 /* Widget unique pour un dossier de favoris (réel ou virtuel) : Tuiles /
-   Icônes seules / Liste / Liste dense / Pastilles pour un affichage
-   toujours visible sur la feuille, ou Icône compacte pour un aperçu façon
-   écran d'accueil de téléphone qui s'ouvre en fenêtre au clic. Peut aussi
-   rester entièrement virtuel — laisse le dossier vide et remplis-le à la
-   main par glisser-déposer (panneau latéral ou clic droit → nouveau
-   sous-dossier, voir bmview.js).
+   Icônes seules / Liste / Liste dense / Pastilles, toujours affiché sur la
+   feuille. Peut rester entièrement virtuel — laisse le dossier vide et
+   remplis-le à la main par glisser-déposer (panneau latéral ou clic droit
+   → nouveau sous-dossier, voir bmview.js). Un sous-dossier créé ainsi
+   s'affiche toujours en icône compacte façon écran d'accueil de téléphone,
+   qui s'ouvre en fenêtre au clic — ce n'est plus un réglage du widget
+   lui-même, seulement le rendu inhérent des sous-dossiers faits main.
 
    Le type "bookmarks" reste enregistré (caché du sélecteur "Ajouter un
    module", voir hidden ci-dessous) uniquement pour que les modules créés
    avant la fusion des deux anciens widgets continuent de fonctionner tels
-   quels, sans migration de données. */
+   quels, sans migration de données. Un widget déjà réglé sur l'ancienne vue
+   "app" (Icône compacte, retirée du sélecteur) continue aussi de fonctionner
+   telle quelle — voir le rendu `s.view === 'app'` dans bmview.js. */
 
 const shared = {
   name: 'Dossier',
-  blurb: 'Un dossier de favoris — tuiles, liste, ou icône compacte qui s\'ouvre en fenêtre. Peut rester virtuel, rempli à la main.',
+  blurb: 'Un dossier de favoris — tuiles, icônes, liste ou pastilles. Clic droit dedans pour créer des sous-dossiers façon écran d\'accueil de téléphone. Peut rester virtuel, rempli à la main.',
   defaultSize: { w: 4, h: 2 },
   defaults: {
     folderId: null,
@@ -42,25 +45,25 @@ const shared = {
       options: [
         ['tiles', 'Tuiles'], ['icons', 'Icônes seules'], ['list', 'Liste'],
         ['compact', 'Liste dense'], ['badges', 'Pastilles'],
-        ['app', 'Icône compacte (ouvre une fenêtre)'],
       ],
+      hint: 'Les sous-dossiers créés par clic droit s\'affichent toujours en icône compacte, quel que soit ce réglage.',
     },
     { key: 'tile', label: 'Largeur des tuiles', type: 'range', min: 56, max: 140, step: 4, when: (s) => s.view === 'tiles' || s.view === 'icons' },
     {
       key: 'icon', label: 'Taille des icônes', type: 'range', min: 16, max: 44, step: 2,
-      when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges' || s.view === 'app',
+      when: (s) => s.view === 'tiles' || s.view === 'icons' || s.view === 'badges',
     },
     {
-      key: 'sort', label: 'Tri', type: 'select', when: (s) => s.view !== 'app',
+      key: 'sort', label: 'Tri', type: 'select',
       options: [['manual', 'Ordre local (glisser-déposer)'], ['alpha', 'Alphabétique'], ['recent', 'Ajout récent']],
       hint: 'L\'ordre local est propre à Atelier — il ne change jamais l\'ordre réel dans Chrome.',
     },
-    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200, when: (s) => s.view !== 'app' },
+    { key: 'limit', label: 'Nombre max (0 = tout)', type: 'number', min: 0, max: 200 },
     {
       key: 'openIn', label: 'Ouvrir les liens', type: 'select',
       options: [['current', 'Dans cet onglet'], ['new', 'Dans un nouvel onglet']],
     },
-    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean', when: (s) => s.view !== 'app' },
+    { key: 'showCrumbs', label: 'Afficher le fil d\'Ariane', type: 'boolean' },
   ],
 
   title(w) {
