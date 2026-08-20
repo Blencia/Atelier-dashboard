@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.2.0] — 2026-08-20
+
 ### Modifié — changement de comportement important
 - **L'organisation dans Atelier (ordre, classement entre modules) est
   maintenant entièrement locale à Atelier et n'écrit plus jamais dans tes
