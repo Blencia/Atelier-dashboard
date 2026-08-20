@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.8.0] — 2026-08-20
+
 ### Ajouté
 - Vue Pastilles du module Dossier : nouvelle option **Design wrappé**, qui
   réduit la marge du module au minimum pour qu'il prenne le moins de place
