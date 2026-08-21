@@ -324,10 +324,23 @@ body.is-editing .widget-tools { display: flex; }
 .widget-body::-webkit-scrollbar { width: 8px; }
 .widget-body::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 8px; }
 
-/* Vue Pastilles, réglage « Design wrappé » : la marge du module est réduite
-   au minimum pour que son contour colle aux pastilles. */
-.widget-body.is-wrapped { padding: 4px; }
-.widget-body.is-wrapped .bm-badges { gap: 4px; }
+/* Vue Pastilles, réglage « Design wrappé » : le module devient une pastille
+   allongée collée à son contenu — plus de cartouche (titre/dimensions/
+   réglages), juste les pastilles à la file, contour arrondi au maximum.
+   La cartouche redevient visible en mode plan pour garder accès au
+   déplacement/réglages/suppression (sinon plus aucun moyen d'y toucher). */
+body:not(.is-editing) .widget:has(> .widget-body.is-wrapped) {
+  border-radius: 999px;
+  width: fit-content;
+  align-self: start;
+  justify-self: start;
+}
+body:not(.is-editing) .widget:has(> .widget-body.is-wrapped) .widget-head { display: none; }
+.widget-body.is-wrapped {
+  padding: 4px;
+  overflow: visible;
+}
+.widget-body.is-wrapped .bm-badges { flex-wrap: nowrap; gap: 4px; }
 
 /* Mode plan : coins d'équerre + poignée */
 body.is-editing .widget {

@@ -6,6 +6,13 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Modifié
+- Design wrappé (vue Pastilles) revu : le module devient une vraie
+  pastille allongée, sans cartouche (titre/dimensions/réglages) ni cadre
+  rectangulaire — juste les pastilles à la file, contour arrondi au
+  maximum, collé à leur hauteur. La cartouche reste accessible en mode
+  plan pour déplacer/régler/supprimer le module.
+
 ## [1.8.0] — 2026-08-20
 
 ### Ajouté
