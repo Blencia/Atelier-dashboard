@@ -145,6 +145,16 @@
   } catch { Object.assign(mem, { config: preset }); }
   const persist = () => { try { localStorage.setItem('atelier-preview', JSON.stringify(mem)); } catch {} };
 
+  // Bac séparé pour chrome.storage.sync, question de montrer le miroir
+  // best-effort en démo (voir store.js) — persiste aussi, dans une autre
+  // clé, pour simuler un « autre appareil » qui retrouverait cette donnée.
+  const memSync = {};
+  try {
+    const savedSync = localStorage.getItem('atelier-preview-sync');
+    if (savedSync) Object.assign(memSync, JSON.parse(savedSync));
+  } catch { /* bac de synchro vide */ }
+  const persistSync = () => { try { localStorage.setItem('atelier-preview-sync', JSON.stringify(memSync)); } catch {} };
+
   window.chrome = {
     runtime: { getURL: (p) => 'preview://' + p, getManifest: () => ({ version: 'aperçu' }) },
     storage: {
@@ -156,6 +166,14 @@
         async set(obj) { Object.assign(mem, obj); persist(); },
         async remove(k) { [].concat(k).forEach((x) => delete mem[x]); persist(); },
         async getBytesInUse() { return JSON.stringify(mem).length; },
+      },
+      sync: {
+        async get(keys) {
+          const list = keys == null ? Object.keys(memSync) : [].concat(keys);
+          return Object.fromEntries(list.filter((k) => k in memSync).map((k) => [k, memSync[k]]));
+        },
+        async set(obj) { Object.assign(memSync, obj); persistSync(); },
+        async remove(k) { [].concat(k).forEach((x) => delete memSync[x]); persistSync(); },
       },
       onChanged: noop(),
     },

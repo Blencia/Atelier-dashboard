@@ -5,6 +5,23 @@ const KEY = 'config';
 const WALL = 'wallpaper';
 export const SCHEMA_VERSION = 2;
 
+/* Miroir best-effort vers chrome.storage.sync : storage.local reste la
+   SEULE source de vérité sur cet appareil. Le miroir sert uniquement à ce
+   qu'un autre appareil connecté au même compte Chrome puisse adopter cette
+   config au premier lancement (voir load()) ou via le bouton « Restaurer
+   depuis la synchro Chrome » des réglages. Découpé en morceaux car
+   chrome.storage.sync limite chaque entrée à 8 Ko (QUOTA_BYTES_PER_ITEM) —
+   les tailles ci-dessous sont volontairement bien en-deçà des limites
+   réelles (8 Ko/entrée, 100 Ko au total) pour absorber l'inflation du
+   JSON.stringify d'un morceau (guillemets échappés, accents multioctets)
+   sans jamais s'en approcher. */
+const SYNC_META_KEY = 'sync_meta';
+const SYNC_CHUNK_PREFIX = 'sync_c';
+const SYNC_MAX_CHUNKS = 40;
+const SYNC_CHUNK_CHARS = 2000;
+const SYNC_SAFE_BYTES = 70_000;
+let syncTimer = null;
+
 function uid(prefix = 'w') {
   return prefix + Math.random().toString(36).slice(2, 9);
 }
@@ -142,8 +159,23 @@ export const store = {
 
   async load() {
     const got = await chrome.storage.local.get([KEY, WALL]);
-    this.data = migrate(got[KEY]);
     this.wallpaper = got[WALL] || null;
+    if (got[KEY] === undefined) {
+      // Premier lancement sur CET appareil : si une config a déjà été
+      // synchronisée depuis un autre appareil connecté au même compte
+      // Chrome, on l'adopte tout de suite plutôt que de repartir à zéro.
+      const fromSync = await this.pullFromSync();
+      if (fromSync) {
+        this.data = migrate(fromSync);
+        await chrome.storage.local.set({ [KEY]: this.data });
+        return this.data;
+      }
+    }
+    this.data = migrate(got[KEY]);
+    // Pousse aussi l'état courant vers la synchro — utile pour un appareil
+    // déjà utilisé avant l'ajout de cette fonctionnalité, dont la config
+    // locale existante n'a encore jamais été recopiée.
+    this.scheduleSyncMirror();
     return this.data;
   },
 
@@ -151,7 +183,74 @@ export const store = {
   async save({ silent = false } = {}) {
     this.selfWrites++;
     await chrome.storage.local.set({ [KEY]: this.data });
+    this.scheduleSyncMirror();
     if (!silent) listeners.forEach((fn) => fn(this.data));
+  },
+
+  syncStatus: 'idle', // 'idle' | 'ok' | 'too_large' | 'error' | 'unsupported'
+  syncBytes: 0,
+  syncedAt: null,
+
+  /** Programme une synchro, débattue (jamais à chaque frappe/glissé — chrome.storage.sync
+      limite le nombre d'écritures par minute). */
+  scheduleSyncMirror() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => { this.mirrorToSync(); }, 3000);
+  },
+
+  /** Best-effort : recopie this.data vers chrome.storage.sync, en morceaux.
+      storage.local reste la source de vérité sur cet appareil — un échec
+      ici (quota, hors-ligne) n'affecte jamais l'usage normal, seulement la
+      disponibilité de la config sur d'autres appareils. */
+  async mirrorToSync() {
+    if (!chrome.storage?.sync) { this.syncStatus = 'unsupported'; return; }
+    const json = JSON.stringify(this.data);
+    const bytes = new TextEncoder().encode(json).length;
+    this.syncBytes = bytes;
+    if (bytes > SYNC_SAFE_BYTES) { this.syncStatus = 'too_large'; return; }
+
+    const chunks = [];
+    for (let i = 0; i < json.length; i += SYNC_CHUNK_CHARS) chunks.push(json.slice(i, i + SYNC_CHUNK_CHARS));
+    const payload = { [SYNC_META_KEY]: { n: chunks.length, v: SCHEMA_VERSION, t: Date.now() } };
+    chunks.forEach((c, i) => { payload[`${SYNC_CHUNK_PREFIX}${i}`] = c; });
+    const stale = [];
+    for (let i = chunks.length; i < SYNC_MAX_CHUNKS; i++) stale.push(`${SYNC_CHUNK_PREFIX}${i}`);
+
+    try {
+      await chrome.storage.sync.set(payload);
+      if (stale.length) await chrome.storage.sync.remove(stale);
+      this.syncStatus = 'ok';
+      this.syncedAt = Date.now();
+    } catch (err) {
+      this.syncStatus = 'error';
+      console.error('[Atelier] synchro Chrome', err);
+    }
+  },
+
+  /** Relit la config déposée par un autre appareil sur chrome.storage.sync —
+      ne touche à rien ici. Renvoie l'objet, ou null si absente/invalide. */
+  async pullFromSync() {
+    if (!chrome.storage?.sync) return null;
+    try {
+      const gotMeta = await chrome.storage.sync.get(SYNC_META_KEY);
+      const meta = gotMeta[SYNC_META_KEY];
+      if (!meta || typeof meta.n !== 'number' || meta.n <= 0) return null;
+      const keys = Array.from({ length: meta.n }, (_, i) => `${SYNC_CHUNK_PREFIX}${i}`);
+      const got = await chrome.storage.sync.get(keys);
+      return JSON.parse(keys.map((k) => got[k] || '').join(''));
+    } catch {
+      return null;
+    }
+  },
+
+  /** Bouton « Restaurer depuis la synchro Chrome » des réglages : écrase la
+      config locale de CET appareil par celle synchronisée depuis un autre. */
+  async restoreFromSync() {
+    const parsed = await this.pullFromSync();
+    if (!parsed) return false;
+    this.data = migrate(parsed);
+    await this.save();
+    return true;
   },
 
   async setWallpaper(dataUrl) {

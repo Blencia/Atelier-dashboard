@@ -62,8 +62,11 @@
   <h1>Politique de confidentialité</h1>
   <p class="updated">Dernière mise à jour : 17 août 2026</p>
 
-  <p class="lead">Atelier ne collecte rien, n'envoie rien, ne partage rien.
-  Aucun serveur, aucun compte, aucun analytique, aucune publicité.</p>
+  <p class="lead">Atelier ne collecte rien et ne partage rien avec Atelier ou
+  des tiers. Aucun serveur ni compte propres à l'extension, aucun
+  analytique, aucune publicité. Deux exceptions ponctuelles et strictement
+  fonctionnelles, détaillées ci-dessous : le module optionnel Météo, et la
+  synchronisation de la mise en page via ton propre compte Chrome.</p>
 
   <h2>Données auxquelles l'extension accède</h2>
   <table>
@@ -83,8 +86,11 @@
       </tr>
       <tr>
         <td>Votre mise en page et vos réglages</td>
-        <td>Retrouver votre tableau de bord à chaque nouvel onglet</td>
-        <td><code>chrome.storage.local</code>, sur votre appareil seulement</td>
+        <td>Retrouver votre tableau de bord à chaque nouvel onglet, et sur
+        vos autres appareils</td>
+        <td><code>chrome.storage.local</code> (toujours) ; recopiée aussi,
+        si elle tient sous ~70 Ko, dans <code>chrome.storage.sync</code> —
+        la synchronisation intégrée à Chrome, liée à votre compte Google</td>
       </tr>
       <tr>
         <td>Le texte du bloc-notes</td>
@@ -98,8 +104,25 @@
       </tr>
     </tbody>
   </table>
-  <p>Aucune de ces données ne quitte votre ordinateur. L'extension n'effectue
-  aucune requête réseau. Les icônes de site sont servies localement par Chrome.</p>
+  <p>À deux exceptions près, aucune de ces données ne quitte votre
+  ordinateur : la synchronisation décrite ci-dessus (via votre propre
+  compte Chrome — jamais vers un serveur Atelier, désactivable dans vos
+  réglages Chrome), et le module optionnel Météo, qui envoie le nom de
+  ville saisi à Open-Meteo (un service tiers) uniquement si vous ajoutez ce
+  module. Les icônes de site sont servies localement par Chrome.</p>
+
+  <h2>Synchronisation entre appareils</h2>
+  <p>Si elle est assez petite (moins d'environ 70 Ko), votre mise en page
+  est recopiée dans <code>chrome.storage.sync</code> — le mécanisme de
+  synchronisation intégré à Chrome, lié à votre compte Google, et non un
+  serveur exploité par Atelier. C'est ce qui permet à votre mise en page
+  d'apparaître automatiquement quand vous vous connectez à votre compte
+  Chrome sur un autre appareil. Cette synchronisation suit vos propres
+  réglages Chrome (Paramètres → Vous et Google → Synchronisation) ; si
+  elle est désactivée ou que la mise en page est trop volumineuse, elle
+  reste locale à l'appareil, et Réglages → Données propose un export/import
+  manuel en fichier <code>.json</code> ainsi qu'un bouton pour restaurer la
+  dernière version synchronisée quand elle est disponible.</p>
 
   <h2>Permissions demandées</h2>
   <ul>
@@ -107,7 +130,9 @@
     favoris, pour afficher les dossiers dans les modules et alimenter la
     recherche. L'extension ne crée, ne modifie et ne supprime aucun favori.</li>
     <li><strong><code>storage</code></strong> — enregistrer votre mise en page
-    et vos réglages localement.</li>
+    et vos réglages, localement toujours et recopiés (best-effort) vers la
+    synchronisation Chrome de votre compte si le volume le permet — voir
+    « Synchronisation entre appareils » ci-dessus.</li>
     <li><strong><code>favicon</code></strong> — afficher l'icône de chaque site
     à côté du lien correspondant.</li>
     <li><strong><code>topSites</code></strong> — lire la liste des sites

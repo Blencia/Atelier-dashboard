@@ -496,8 +496,9 @@ export async function openSettings() {
   const bytes = await store.bytesInUse();
   body.append(el('p', {
     class: 'field-hint',
-    text: `Stockage local utilisé : ${(bytes / 1024).toFixed(0)} Ko. Tout reste sur cet appareil.`,
+    text: `Stockage local utilisé : ${(bytes / 1024).toFixed(0)} Ko. Toujours sur cet appareil.`,
   }));
+  body.append(el('p', { class: 'field-hint', text: syncStatusText() }));
 
   const importFile = el('input', { type: 'file', accept: 'application/json,.json', style: { display: 'none' } });
   importFile.addEventListener('change', async () => {
@@ -515,6 +516,15 @@ export async function openSettings() {
     el('button', { class: 'btn', type: 'button', text: 'Exporter', onclick: exportConfig }),
     el('button', { class: 'btn', type: 'button', text: 'Importer', onclick: () => importFile.click() }),
     el('button', {
+      class: 'btn', type: 'button', text: 'Restaurer depuis la synchro Chrome',
+      onclick: async () => {
+        if (!confirm('Remplacer la configuration de CET appareil par celle synchronisée depuis un autre appareil connecté au même compte Chrome ? Tes réglages actuels ici seront écrasés.')) return;
+        const ok = await store.restoreFromSync();
+        toast(ok ? 'Configuration restaurée depuis la synchro Chrome' : 'Aucune synchro disponible');
+        if (ok) close();
+      },
+    }),
+    el('button', {
       class: 'btn btn-danger', type: 'button', text: 'Tout réinitialiser',
       onclick: async () => {
         if (confirm('Remettre la configuration à zéro ? Les favoris de Chrome ne sont pas touchés.')) {
@@ -526,7 +536,7 @@ export async function openSettings() {
     importFile,
   ]));
 
-  openModal({ title: 'Réglages', body });
+  const close = openModal({ title: 'Réglages', body });
 }
 
 /* ============================================================
@@ -605,6 +615,23 @@ export async function openChangelog() {
       ]));
     }
     body.append(wrap);
+  }
+}
+
+/** Résume l'état du miroir best-effort vers chrome.storage.sync (voir store.js). */
+function syncStatusText() {
+  const ko = (store.syncBytes / 1024).toFixed(0);
+  switch (store.syncStatus) {
+    case 'ok':
+      return `Synchro Chrome : à jour (${ko} Ko) — apparaît automatiquement sur tes autres appareils connectés au même compte Chrome.`;
+    case 'too_large':
+      return `Synchro Chrome : dashboard trop volumineux (${ko} Ko, limite ~70 Ko) — utilise Exporter/Importer pour le transférer à la main.`;
+    case 'error':
+      return 'Synchro Chrome : échec de la dernière tentative (voir la console).';
+    case 'unsupported':
+      return 'Synchro Chrome : indisponible dans ce contexte.';
+    default:
+      return 'Synchro Chrome : en attente de la première synchronisation (dans quelques secondes).';
   }
 }
 

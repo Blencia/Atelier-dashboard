@@ -40,7 +40,11 @@ scripts/release.sh 0.2.0  # bump + changelog + commit + tag + build
 3. **Charger l'extension non empaquetée** → choisis le dossier `atelier/`
 4. Ouvre un nouvel onglet. Chrome demande de confirmer le changement de page d'accueil.
 
-Rien ne sort de la machine : aucune requête réseau, aucun compte.
+Aucun serveur ni compte propres à Atelier. Deux exceptions ponctuelles et
+strictement fonctionnelles : le module optionnel Météo (appel à Open-Meteo)
+et la synchronisation best-effort de ta mise en page via `chrome.storage.sync`
+— ton propre compte Chrome, pas un serveur Atelier — voir « Sauvegarde »
+plus bas.
 
 ## Utiliser
 
@@ -188,7 +192,31 @@ favoris Chrome.
 
 ## Sauvegarde
 
-Réglages → Données → **Exporter** produit un `.json` avec toute la mise en page.
+La mise en page (modules, réglages, thème) est toujours écrite dans
+`chrome.storage.local` — jamais perdue tant que l'extension reste
+installée sur cet appareil.
+
+### Synchronisation entre appareils (automatique, best-effort)
+
+Si elle tient sous ~70 Ko, la mise en page est aussi recopiée dans
+`chrome.storage.sync` — la synchronisation intégrée à Chrome, liée à ton
+compte Google, pas un serveur exploité par Atelier. C'est ce qui permet à
+ta mise en page d'apparaître automatiquement quand tu te connectes à ton
+compte Chrome sur un autre appareil (source du tout premier lancement sur
+cet appareil : `store.load()` adopte la config synchronisée si elle existe
+et qu'aucune n'a encore été créée localement). Cette synchro suit tes
+propres réglages Chrome (Paramètres → Toi et Google → Synchronisation) et
+son quota (100 Ko au total, 8 Ko par entrée, d'où le découpage en morceaux
+dans `store.js`) ; Réglages → Données affiche son état (à jour / trop
+volumineux / erreur) et un bouton **Restaurer depuis la synchro Chrome**
+permet de la récupérer manuellement sur un appareil qui a déjà sa propre
+config locale (l'adoption automatique ne se déclenche que sur un appareil
+vierge, pour ne jamais écraser une config existante sans confirmation).
+
+### Export manuel
+
+Réglages → Données → **Exporter** produit un `.json` avec toute la mise en page
+— utile si la synchro Chrome est désactivée, ou pour archiver une version.
 À l'import sur une autre machine, les IDs de dossiers ne correspondent pas :
 chaque module de favoris se répare tout seul en retrouvant le dossier par son
 chemin (`Barre de favoris / Dev / Docs`). L'ordre local et le classement

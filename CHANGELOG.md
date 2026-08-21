@@ -6,6 +6,20 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+### Ajouté
+- Synchronisation entre appareils (automatique, best-effort) : la mise en
+  page (modules, réglages, thème) reste toujours écrite dans
+  `chrome.storage.local`, et si elle tient sous ~70 Ko, elle est aussi
+  recopiée dans `chrome.storage.sync` — la synchro intégrée à Chrome, liée
+  à ton compte Google, pas un serveur Atelier. Un appareil vierge (première
+  installation, aucune config locale existante) adopte automatiquement la
+  dernière config synchronisée au lieu de repartir à zéro. Réglages →
+  Données affiche l'état de la synchro (à jour / trop volumineuse / erreur)
+  et propose un bouton **Restaurer depuis la synchro Chrome** pour la
+  récupérer manuellement sur un appareil qui a déjà sa propre config.
+  L'export/import en `.json` reste disponible en complément (utile si la
+  synchro Chrome est désactivée, ou pour archiver une version).
+
 ## [1.9.0] — 2026-08-21
 
 ### Modifié

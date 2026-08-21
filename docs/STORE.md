@@ -55,11 +55,14 @@ ENTIÈREMENT PERSONNALISABLE
 • Nombre de colonnes, espacement, hauteur des rangées, arrondi des coins
 • Fond d'écran, densité d'affichage, taille des icônes
 • Export et import de ta mise en page en JSON
+• Ta mise en page se synchronise automatiquement sur tes autres appareils
+  via ton compte Chrome (aucun serveur ni compte propres à Atelier)
 
 RESPECTUEUX
-• Aucun compte, aucune inscription
-• Aucune requête réseau, aucun analytique, aucune publicité
-• Tout reste dans ton navigateur
+• Aucun compte propre à Atelier, aucune inscription
+• Aucun serveur, aucun analytique, aucune publicité
+• Tout reste dans ton navigateur (ou circule via ton propre compte Chrome
+  pour la synchro, jamais vers un tiers)
 • Tes favoris ne sont jamais modifiés — l'extension les lit, point
 
 Code source ouvert : <URL du dépôt>
@@ -81,9 +84,13 @@ recherche. Lecture seule : aucun favori n'est créé, modifié ni supprimé.
 
 **`storage`**
 ```
-Enregistre localement la mise en page du tableau de bord, les préférences
-d'affichage et le contenu du module bloc-notes. Aucune donnée n'est
-transmise à l'extérieur de l'appareil.
+Enregistre localement (chrome.storage.local) la mise en page du tableau de
+bord, les préférences d'affichage et le contenu du module bloc-notes. Si le
+volume le permet (sous ~70 Ko), la mise en page est aussi recopiée dans
+chrome.storage.sync — la synchronisation native de Chrome, liée au compte
+Google de l'utilisateur — pour qu'elle apparaisse automatiquement sur ses
+autres appareils connectés au même compte. Aucun serveur ni compte propres
+à Atelier ; aucune donnée n'est transmise à un tiers.
 ```
 
 **`favicon`**
@@ -124,11 +131,17 @@ personnalisable.
 ```
 
 **Collecte de données** : cocher *ne collecte aucune donnée utilisateur*, et
-les trois attestations de conformité en bas du formulaire. Nuance à ajouter
-dans le texte libre si le formulaire le permet : le module optionnel Météo
-transmet le nom de ville saisi à Open-Meteo (tiers) pour obtenir la
-prévision — rien n'est collecté ou stocké par Atelier au-delà des
-préférences locales de l'utilisateur.
+les trois attestations de conformité en bas du formulaire. Nuances à ajouter
+dans le texte libre si le formulaire le permet :
+- le module optionnel Météo transmet le nom de ville saisi à Open-Meteo
+  (tiers) pour obtenir la prévision ;
+- la mise en page du tableau de bord peut être recopiée via
+  chrome.storage.sync (la synchronisation native de Chrome) pour apparaître
+  sur les autres appareils de l'utilisateur — géré entièrement par
+  l'infrastructure Chrome/Google, aucun serveur Atelier.
+
+Rien n'est collecté ou stocké par Atelier lui-même au-delà des préférences
+locales de l'utilisateur.
 
 ## Après l'envoi
 
