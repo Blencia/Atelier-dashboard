@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [1.9.0] — 2026-08-21
+
 ### Modifié
 - Design wrappé (vue Pastilles) revu : le module devient une vraie
   pastille allongée, sans cartouche (titre/dimensions/réglages) ni cadre
