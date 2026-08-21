@@ -6,6 +6,8 @@ envoi au Chrome Web Store, sinon Google refuse le paquet.
 
 ## [Non publié]
 
+## [2.0.0] — 2026-08-21
+
 ### Ajouté
 - Synchronisation entre appareils (automatique, best-effort) : la mise en
   page (modules, réglages, thème) reste toujours écrite dans
